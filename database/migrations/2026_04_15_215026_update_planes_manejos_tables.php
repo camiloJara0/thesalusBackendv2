@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        // Cambiar columnas llaves foraneas a null
+        DB::statement("ALTER TABLE plan_manejo_medicamentos ADD COLUMN codigo VARCHAR(255) NULL AFTER medicamento");
+        DB::statement("ALTER TABLE plan_manejo_medicamentos MODIFY COLUMN cantidad VARCHAR(255) NULL");
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        DB::statement("ALTER TABLE plan_manejo_medicamentos DROP COLUMN codigo");
+        DB::statement("ALTER TABLE plan_manejo_medicamentos MODIFY COLUMN cantidad INT NOT NULL");
+    }
+};

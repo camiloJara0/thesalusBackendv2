@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Analisis extends Model
+{
+    use HasFactory;
+    protected $fillable = [
+        'motivo',
+        'observacion',
+        'tratamiento',
+        'analisis',
+        'tipoAnalisis',
+        'id_historia',
+        'id_medico',
+        'id_servicio',
+    ];
+    public function historia(){
+        return $this->belongsTo(Historia_Clinica::class, 'id_historia');
+    }
+    
+    public function diagnosticos()
+    {
+        return $this->hasMany(Diagnostico::class, 'id_analisis');
+    }
+
+    public function enfermedad()
+    {
+        return $this->hasOne(Enfermedad::class, 'id_analisis');
+    }
+
+    public function examenFisico()
+    {
+        return $this->hasOne(Examen_fisico::class, 'id_analisis');
+    }
+
+    public function antecedentes()
+    {
+        return $this->hasMany(Antecedente::class, 'id_analisis');
+    }
+
+    public function medicamentos()
+    {
+        return $this->hasMany(Plan_manejo_medicamento::class, 'id_analisis');
+    }
+
+    public function procedimientos()
+    {
+        return $this->hasMany(Plan_manejo_procedimiento::class, 'id_analisis');
+    }
+
+    public function servicio()
+    {
+        return $this->belongsTo(Servicio::class, 'id_servicio');
+    }
+
+    public function profesional()
+    {
+        return $this->belongsTo(Profesional::class, 'id_medico');
+    }
+
+    
+    public function nota()
+    {
+        return $this->hasOne(Nota::class, 'id_analisis');
+    }
+
+    public function terapia()
+    {
+        return $this->hasOne(Terapia::class, 'id_analisis');
+    }
+}

@@ -1,0 +1,246 @@
+<?php
+
+namespace App\Http\Controllers;
+use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Cita;
+use App\Models\Terapia;
+use App\Models\Diagnostico;
+use App\Models\Diagnostico_relacionado;
+use App\Models\Analisis;
+use App\Models\Historia_Clinica;
+
+use Illuminate\Http\Request;
+
+class TerapiaController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        $terapia = Terapia::get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $terapia
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            $ids = [];
+            $data = $request->all();
+
+            $historia = Historia_Clinica::where('id_paciente', $request->historia['id_paciente'])->first();
+            
+            // 1️⃣ Guardar Historia Clínica
+            if(!$historia){
+                $historia = Historia_Clinica::create($data['historia']);
+            }
+            
+            // 2️⃣ Guardar Análisis con id_historia
+            $data['Analisis']['id_historia'] = $historia->id;
+            
+            $analisis = Analisis::create([
+                'motivo' => 'Terapia',
+                'observacion' => null,
+                'tratamiento' => null,
+                'analisis' => null,
+                'tipoAnalisis' => null,
+                'id_historia' => $historia->id,
+                'id_medico' => $data['id_medico'],
+                'id_servicio' => $data['id_servicio'],
+            ]);
+            $ids['Analisis'] = $analisis->id;
+            
+            $data['Terapia']['id_analisis'] = $analisis->id;
+            if (!empty($data['Terapia'])) {
+                $terapia = Terapia::create($data['Terapia']);
+                $ids['Terapia'] = $terapia->id;
+            }
+
+            $ids['Diagnosticos'] = [];
+            foreach ($data['Diagnosticos'] ?? [] as $diagnostico) {
+                $nuevo = Diagnostico::create([...$diagnostico, 'id_analisis' => $analisis->id]);
+                $ids['Diagnosticos'][] = $nuevo->id;
+            }
+
+            $ids['DiagnosticosCIF'] = [];
+            foreach ($data['DiagnosticosCIF'] ?? [] as $diagnosticoCIF) {
+                $nuevo = Diagnostico_relacionado::create([...$diagnosticoCIF, 'id_analisis' => $analisis->id]);
+                $ids['DiagnosticosCIF'][] = $nuevo->id;
+            }
+
+            // 4️⃣ Actualizar estado de la Cita
+            if (!empty($data['Cita'])) {
+                Cita::where('id', $data['Cita']['id'] ?? null)
+                    ->update([
+                        'estado' => 'Realizada',
+                        'id_analisis' => null
+                    ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true, 
+                'ids' => $ids,
+                'data' => $terapia
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error al guardar Terapia', 'message' => $e->getMessage()], 500);
+        }
+
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  \App\Models\Terapia  $terapia
+     * @return \Illuminate\Http\Response
+     */
+    public function show(Terapia $terapia)
+    {
+        return $terapia;
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Terapia  $terapia
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, Terapia $terapia)
+    {
+        $terapia = Terapia::find($request->input('id'));
+
+       if($terapia) {
+           $terapia->objetivos = $request->objetivos;
+           $terapia->fecha = $request->fecha;
+           $terapia->hora = $request->hora;
+           $terapia->sesion = $request->sesion;
+           $terapia->evolucion = $request->evolucion;
+           $terapia->save();
+    
+           return response()->json([
+            'success' => true,
+            'message' => 'Terapia actualizada exitosamente.',
+            'data' => $terapia
+           ]);
+        };
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Terapia no valida.'
+        ]);
+    }
+
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  \App\Models\Terapia  $terapia
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(Terapia $terapia)
+    {
+        try {
+
+            if(!$terapia){
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No se encontro nota.'
+                ], 500);
+            }
+
+            $analisis = Analisis::where('id', $terapia->id_analisis)->first();
+            // Eliminar analisis y todos los registros relacionados
+            $analisis->diagnosticos()->delete();
+            $analisis->enfermedad()->delete();
+            $analisis->examenFisico()->delete();
+            $analisis->medicamentos()->delete();
+            $analisis->procedimientos()->delete();
+            $terapia->delete();
+            $analisis->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reporte de terapia eliminada exitosamente.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al eliminar terapia', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function imprimir($id)
+    {
+        $terapia = Terapia::where('id_analisis', $id)->first();
+
+        $analisis = DB::table('analises')
+            ->join('servicio', 'analises.id_servicio', '=', 'servicio.id')
+            ->join('historia__clinicas', 'analises.id_historia', '=', 'historia__clinicas.id')
+            ->select(
+                'analises.*',
+                'servicio.plantilla as servicio',
+                'servicio.name as nombreServicio',
+                'historia__clinicas.id_paciente as id_paciente'
+            )
+            ->where('analises.id', $terapia->id_analisis)
+            ->first();
+
+        // Paciente con su información de usuario
+        $paciente = DB::table('pacientes')
+            ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
+            ->join('eps', 'pacientes.id_eps', '=', 'eps.id')
+            ->where('pacientes.id', $analisis->id_paciente)
+            ->select('pacientes.*', 'informacion_users.*', 'eps.nombre as Eps')
+            ->first();
+
+        // Profesional con su información de usuario
+        $profesional = DB::table('profesionals')
+            ->join('informacion_users', 'profesionals.id_infoUsuario', '=', 'informacion_users.id')
+            ->where('profesionals.id', $analisis->id_medico)
+            ->select('profesionals.*', 'informacion_users.*')
+            ->first();
+
+        // Diagnósticos que coincidan con el id_analisis
+        $diagnosticos = DB::table('diagnosticos')
+            ->where('id_analisis', $terapia->id_analisis)
+            ->get();
+
+        $diagnosticosCIF = DB::table('diagnostico_relacionados')
+            ->where('id_analisis', $terapia->id_analisis)
+            ->get();
+
+        $convenios = DB::table('paciente_has_convenios')
+            ->where('id_paciente', $analisis->id_paciente)
+            ->join('convenios', 'paciente_has_convenios.id_convenio', '=', 'convenios.id')
+            ->select('convenios.*')
+            ->first();
+
+        $fileName = 'Terapia_' . $profesional->name . '_' . $terapia->fecha . '.pdf';
+
+        $pdf = Pdf::loadView('pdf.terapia', compact('terapia','paciente','profesional','diagnosticos','diagnosticosCIF','analisis', 'convenios'));
+        return response($pdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Expose-Headers', 'Content-Disposition')
+            ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+    }
+}

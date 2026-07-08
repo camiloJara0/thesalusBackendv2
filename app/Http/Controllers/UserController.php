@@ -1,0 +1,428 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use App\Http\Request\Login;
+use App\Models\InformacionUser;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\CodigoVerificacionMail;
+use App\Models\CodigoVerificacion;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use App\Models\Profesional_has_permisos;
+
+
+class UserController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        return User::with(['empresa'])->where('estado', 1)->get();
+    }
+
+    public function administradores()
+    {
+        $administradores = User::where('rol', 'Admin')
+            ->where('users.estado', 1)
+            ->join('informacion_users', 'informacion_users.id', '=', 'users.id_infoUsuario')
+            ->select('users.correo', 'informacion_users.*')
+            ->get();
+
+        return response()->json([
+            "success" => true,
+            "data" => $administradores
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        // 1️⃣ Buscar o crear el usuario
+        $informacionUser = InformacionUser::where('No_document', $request->No_document)->first();
+        $user = $informacionUser ? User::where('id_infoUsuario', $informacionUser->id)->first() : null;
+
+            $correo = User::where('correo', $request->correo)->first();
+            if($correo){
+                // 4️⃣ Respuesta
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Correo del administrador ya registrado.',
+                    'correo' => $correo,
+                ], 201);
+            }
+        if(!$informacionUser){
+            // 2️⃣ Guardar información adicional en InformacionUser
+            $informacionUser = new InformacionUser();
+            $informacionUser->name = $request->name;
+            $informacionUser->No_document = $request->No_document;
+            $informacionUser->type_doc = $request->type_doc;
+            $informacionUser->celular = $request->celular;
+            $informacionUser->telefono = $request->telefono ?? null;
+            $informacionUser->nacimiento = $request->nacimiento;
+            $informacionUser->direccion = $request->direccion;
+            $informacionUser->municipio = $request->municipio;
+            $informacionUser->departamento = $request->departamento;
+            $informacionUser->barrio = $request->barrio;
+            $informacionUser->zona = $request->zona;
+            $informacionUser->save();
+        }
+
+        if(!$user){
+            // guardar user si no existe
+            $user = new User();
+            $user->id_empresa = 1;
+            $user->id_infoUsuario = $informacionUser->id;;
+            $user->correo = $request->correo;
+            $user->contraseña = Hash::make($request->contraseña);
+            $user->rol = 'Admin';
+            $user-> save();
+        }
+        
+        // 4️⃣ Respuesta
+        return response()->json([
+            'success' => true,
+            'message' => 'Administrador registrado exitosamente.',
+            'informacion' => $informacionUser,
+        ], 201);
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  \App\Models\User  $user
+     * @return \Illuminate\Http\Response
+     */
+    public function show(User $user)
+    {
+        $user->empresa = $user->Empresa;
+        return $user;
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\User  $user
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, User $user)
+    {
+        // 1️⃣ Buscar o crear el usuario
+        $informacionUser = InformacionUser::where('id', $request->id)->first();
+        $user = $informacionUser ? User::where('id_infoUsuario', $request->id)->first() : null;
+
+        if($user->correo != $request->correo){
+            $correo = User::where('correo', $request->correo)->first();
+            if($correo){
+                // 4️⃣ Respuesta
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Correo del administrador ya registrado.',
+                    'correo' => $correo,
+                ], 201);
+            }
+
+            $usuario->correo = $request->correo;
+            $usuario->save();
+        }
+        if($informacionUser){
+            // 2️⃣ Guardar información adicional en InformacionUser
+            $informacionUser->name = $request->name;
+            $informacionUser->No_document = $request->No_document;
+            $informacionUser->type_doc = $request->type_doc;
+            $informacionUser->celular = $request->celular;
+            $informacionUser->telefono = $request->telefono ?? null;
+            $informacionUser->nacimiento = $request->nacimiento;
+            $informacionUser->direccion = $request->direccion;
+            $informacionUser->municipio = $request->municipio;
+            $informacionUser->departamento = $request->departamento;
+            $informacionUser->barrio = $request->barrio;
+            $informacionUser->zona = $request->zona;
+            $informacionUser->save();
+        }
+        
+        // 4️⃣ Respuesta
+        return response()->json([
+            'success' => true,
+            'message' => 'Administrador actualizado exitosamente.',
+            'informacion' => $informacionUser,
+        ], 201);
+
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  \App\Models\User  $user
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(User $user)
+    {
+        $user->estado = 0;
+        $user->save();
+        response()->json([
+            'message' => 'User desactivado exitosamente.'
+        ]);
+    }
+
+    public function login(Request $request)
+    {
+        $request->validate([
+            'correo' => 'required|email',
+            'contraseña' => 'required',
+        ]);
+
+        $user = User::where('correo', $request->correo)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'type'    => 'USER_NOT_FOUND',
+                'message' => 'El correo no se encuentra registrado'
+            ], 200);
+        }
+
+        if ($user->estado == 0){
+            return response()->json([
+                'success' => false,
+                'type'    => 'USER_DELETE',
+                'message' => 'Usuario Eliminado'
+            ], 200);
+        }
+
+        $registro = Profesional_has_permisos::where('codigo', $request->contraseña)
+            ->where('usado', false)
+            ->first();
+
+        if (!Hash::check($request->contraseña, $user->contraseña) && !$registro) {
+            return response()->json([
+                'success' => false,
+                'type'    => 'INVALID_PASSWORD',
+                'message' => 'La contraseña es incorrecta'
+            ], 200);
+        }
+
+        $tokenResult = $user->createToken('auth_token');
+        
+        // Establece la expiración
+        $accessToken = $tokenResult->accessToken;
+        $accessToken->expires_at = now()->addHours(16);
+        $accessToken->save();
+
+        // Obtén el token en texto plano
+        $token = $tokenResult->plainTextToken;
+
+        // Obtener información adicional del usuario
+        $infoUsuario = InformacionUser::find($user->id_infoUsuario);
+
+        $permisos = [];
+        $hasPermisosIndividuales = [];
+        $idProfesional = null;
+
+        if ($user->rol === 'Profesional') {
+            // Obtener la profesión del usuario
+               $profesional = DB::table('profesionals')
+                    ->where('id_infoUsuario', $user->id_infoUsuario)
+                    ->first();
+
+                if ($profesional) {
+
+                    $idProfesional = $profesional->id;
+                    // 1️⃣ Permisos por profesión
+                    $permisosProfesion = DB::table('profesions_has_permisos')
+                        ->join('secciones', 'profesions_has_permisos.id_seccion', '=', 'secciones.id')
+                        ->where('profesions_has_permisos.id_profesion', $profesional->id_profesion)
+                        ->pluck('secciones.nombre');
+
+                    // 2️⃣ Permisos individuales activos
+                    $permisosIndividuales = DB::table('profesional_has_permisos')
+                        ->join('secciones', 'profesional_has_permisos.id_seccion', '=', 'secciones.id')
+                        ->where('profesional_has_permisos.id_profesional', $profesional->id)
+                        ->where('usado', 0)
+                        ->pluck('secciones.nombre');
+
+                    // 3️⃣ Unificar y eliminar duplicados
+                    $permisos = $permisosProfesion
+                        ->merge($permisosIndividuales)
+                        ->unique()
+                        ->values();
+
+                    $permisosTemporales = DB::table('profesional_has_permisos')
+                        ->join('secciones', 'profesional_has_permisos.id_seccion', '=', 'secciones.id')
+                        ->where('id_profesional', $profesional->id)
+                        ->where('usado', 0)
+                        ->select(
+                            'profesional_has_permisos.id as permiso_id',
+                            'secciones.nombre',
+                            'secciones.id as id_seccion'
+                        )
+                        ->get();
+                        
+                    $hasPermisosIndividuales = $permisosTemporales;
+
+                } else {
+                    $permisos = collect();
+                }
+
+        } elseif ($user->rol == 'Admin') {
+            $permisos = DB::table('secciones')->pluck('nombre');
+        } else {
+            $permisos = collect(); // colección vacía
+        }
+
+
+        if($registro){
+            DB::table('profesional_has_permisos')
+                ->where('id', $registro->id)
+                ->update([
+                    'usado' => 1,
+                    'updated_at' => now()
+                ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login exitoso',
+            'access_token' => $token,
+            'user' => [
+                'correo' => $user->correo,
+                'rol' => $user->rol,
+                'usuario' => array_merge($infoUsuario->toArray(), ['id_profesional' => $idProfesional]),
+                'permisos' => $permisos
+            ],
+            'permisosTemporales' => $hasPermisosIndividuales
+        ]);
+
+    }
+
+    public function verificacion(Request $request)
+    {
+        $request->validate(['correo' => 'required|email']);
+
+        $usuario = User::where('correo', $request->correo)->first();
+
+        if (!$usuario) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Correo no registrado'
+            ]);
+        }
+
+        $codigo = Str::random(6);
+
+        CodigoVerificacion::create([
+            'correo' => $usuario->correo,
+            'codigo' => $codigo,
+            'expira_en' => Carbon::now()->addMinutes(240)
+        ]);
+
+        Mail::to($usuario->correo)->send(new CodigoVerificacionMail($usuario->correo, $codigo));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Correo enviado con código de verificación'
+        ]);
+    }
+
+    public function verificarCodigo(Request $request)
+    {
+        $request->validate([
+            'correo' => 'required|email',
+            'codigo' => 'required|string',
+            'contraseña' => 'required|min:6'
+        ]);
+
+        $registro = CodigoVerificacion::where('correo', $request->correo)
+            ->where('codigo', $request->codigo)
+            ->where('usado', false)
+            ->where('expira_en', '>', now())
+            ->first();
+
+        if (!$registro) {
+            return response()->json(['message' => 'Código inválido o expirado'], 401);
+        }
+
+        $usuario = User::where('correo', $request->correo)->first();
+        $usuario->contraseña = Hash::make($request->contraseña);
+        $usuario->save();
+
+        $registro->usado = true;
+        $registro->save();
+
+        return response()->json(['success' => true, 'message' => 'Contraseña actualizada correctamente']);
+    }
+
+    public function verificarCodigoPrimerVez(Request $request)
+    {
+        $request->validate([
+            'codigo' => 'required|string',
+            'contraseña' => 'required|min:6'
+        ]);
+
+        $correo = CodigoVerificacion::where('codigo', $request->codigo)->first();
+
+        $registro = CodigoVerificacion::where('correo', $correo->correo)
+            ->where('codigo', $request->codigo)
+            ->where('usado', false)
+            ->where('expira_en', '>', now())
+            ->first();
+
+        if (!$registro) {
+            return response()->json(['message' => 'Código inválido o expirado'], 401);
+        }
+
+        $usuario = User::where('correo', $correo->correo)->first();
+        $usuario->contraseña = Hash::make($request->contraseña);
+        $usuario->save();
+
+        $registro->usado = true;
+        $registro->save();
+
+        return response()->json(['success' => true, 'message' => 'Contraseña actualizada correctamente']);
+    }
+
+    public function verificarUsuario(Request $request)
+    {
+        $request->validate(['correo' => 'required|email']);
+
+        $usuario = User::where('correo', $request->correo)->first();
+
+        if (!$usuario) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Correo no registrado'
+            ]);
+        }
+
+        if($usuario->contraseña == null){
+
+            return response()->json([
+                'success' => true,
+                'primer_ingreso' => true,
+                'message' => 'Profesional primer ingreso.'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'primer_ingreso' => false,
+            'message' => 'Usuario ya tiene contraseña registrada.'
+        ]);
+
+    }
+
+}

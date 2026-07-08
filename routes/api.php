@@ -1,0 +1,151 @@
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned the "api" middleware group. Enjoy building your API!
+|
+*/
+use App\Http\Controllers\EpsController;
+use App\Http\Controllers\ProfesionController;
+use App\Http\Controllers\EmpresaController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProfesionalController;
+use App\Http\Controllers\SeccionesController;
+use App\Http\Controllers\PacienteController;
+use App\Http\Controllers\HistoriaClinicaController;
+use App\Http\Controllers\AnalisisController;
+use App\Http\Controllers\ExamenFisicoController;
+use App\Http\Controllers\PlanManejoMedicamentoController;
+use App\Http\Controllers\PlanManejoProcedimientoController;
+use App\Http\Controllers\PlanManejoEquipoController;
+use App\Http\Controllers\PlanManejoInsumoController;
+use App\Http\Controllers\CitaController;
+use App\Http\Controllers\AntecedenteController;
+use App\Http\Controllers\DiagnosticoController;
+use App\Http\Controllers\DiagnosticoRelacionadoController;
+use App\Http\Controllers\NotaController;
+use App\Http\Controllers\DescripcionNotaController;
+use App\Http\Controllers\SoftwareController;
+use App\Http\Controllers\FacturacionController;
+use App\Http\Controllers\EnfermedadController;
+use App\Http\Controllers\InformacionUserController;
+use App\Http\Controllers\TerapiaController;
+use App\Http\Controllers\ServicioController;
+use App\Http\Controllers\Cie10Controller;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InsumoController;
+use App\Http\Controllers\MovimientoController;
+use App\Http\Controllers\KardexController;
+use App\Http\Controllers\HistorialCambioSondaController;
+use App\Http\Controllers\ProfesionalHasPermisosController;
+use App\Http\Controllers\CeldaColorController;
+use App\Http\Controllers\VadecumController;
+use App\Http\Controllers\ConvenioController;
+use App\Http\Controllers\TipoEquipoController;
+use App\Http\Controllers\HistorialInsumoprestadoController;
+
+Route::post('/v1/login', [UserController::class, 'login']);
+Route::post('/v1/recuperarContraseña', [UserController::class, 'verificacion']);
+Route::post('/v1/cambiarContraseña', [UserController::class, 'verificarCodigo']);
+Route::post('/v1/cambiarContraseñaPrimerVez', [UserController::class, 'verificarCodigoPrimerVez']);
+Route::post('/v1/primerIngreso', [UserController::class, 'verificarUsuario']);
+
+Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function () {
+        Route::apiResource('/v1/eps', EpsController::class);
+        Route::apiResource('/v1/professions', ProfesionController::class);
+        Route::apiResource('/v1/empresas', EmpresaController::class);
+        Route::apiResource('/v1/users', UserController::class);
+        Route::apiResource('/v1/profesionals', ProfesionalController::class);
+        Route::apiResource('/v1/pacientes', PacienteController::class);
+        Route::apiResource('/v1/informacionUsers', InformacionUserController::class);
+
+        // Historias post diferentes servicios
+        Route::apiResource('/v1/historiasClinicas', HistoriaClinicaController::class);
+        Route::post('/v1/historiasClinicasNutricion', [HistoriaClinicaController::class, 'storeNutricion']);
+        Route::post('/v1/historiasClinicasTrabajoSocial', [HistoriaClinicaController::class, 'storeTrabajoSocial']);
+        Route::post('/v1/historiasClinicasNota', [HistoriaClinicaController::class, 'storeNota']);
+        Route::apiResource('/v1/terapias', TerapiaController::class);
+
+        Route::apiResource('/v1/analisis', AnalisisController::class);
+        Route::apiResource('/v1/examenFisicos', ExamenFisicoController::class);
+        Route::apiResource('/v1/planManejoMedicamentos', PlanManejoMedicamentoController::class);
+        Route::apiResource('/v1/planManejoProcedimientos', PlanManejoProcedimientoController::class);
+        Route::apiResource('/v1/planManejoEquipos', PlanManejoEquipoController::class);
+        Route::apiResource('/v1/planManejoInsumos', PlanManejoInsumoController::class);
+        Route::apiResource('/v1/antecedentes', AntecedenteController::class);
+        Route::apiResource('/v1/diagnosticos', DiagnosticoController::class);
+        Route::apiResource('/v1/diagnosticosCIF', DiagnosticoRelacionadoController::class);
+        Route::apiResource('/v1/notas', NotaController::class);
+        Route::apiResource('/v1/descripcionNotas', DescripcionNotaController::class);
+        Route::apiResource('/v1/software', SoftwareController::class);
+        Route::apiResource('/v1/facturaciones', FacturacionController::class);
+        Route::apiResource('/v1/enfermedades', EnfermedadController::class);
+        Route::apiResource('/v1/servicios', ServicioController::class);
+        Route::apiResource('/v1/cie10', Cie10Controller::class);
+        Route::apiResource('/v1/insumos', InsumoController::class);
+        Route::apiResource('/v1/movimientos', MovimientoController::class);
+        Route::apiResource('/v1/kardex', KardexController::class);
+        Route::apiResource('/v1/historialCambioSonda', HistorialCambioSondaController::class);
+        Route::apiResource('/v1/profesionalHasPermisos', ProfesionalHasPermisosController::class);
+        Route::apiResource('/v1/celdaColors', CeldaColorController::class);
+        Route::apiResource('/v1/vadecum', VadecumController::class);
+        Route::apiResource('/v1/convenios', ConvenioController::class);
+        Route::apiResource('/v1/tipo_equipos', TipoEquipoController::class);
+        Route::apiResource('/v1/prestaciones', HistorialInsumoprestadoController::class);
+        
+        Route::apiResource('/v1/citas', CitaController::class);
+        Route::get('/v1/citasHoy', [CitaController::class, 'citasHoy']);
+        Route::post('/v1/citasPorRango', [CitaController::class, 'citasPorRango']);
+        Route::post('/v1/citasPaginadas', [CitaController::class, 'citasPaginadas']);
+        Route::post('/v1/citasFiltradas', [CitaController::class, 'citasFiltradas']);
+        Route::get('/v1/filtrosCitas', [CitaController::class, 'filtrosCitas']);
+        Route::post('/v1/variasCitas', [CitaController::class, 'variasCitas']);
+
+
+        Route::get('/v1/analisisInicial', [HistoriaClinicaController::class, 'analisisInicial']);
+        Route::post('/v1/analisisPaciente', [HistoriaClinicaController::class, 'analisisPaciente']);
+        Route::post('/v1/analisisPaginado', [HistoriaClinicaController::class, 'analisisPaginado']);
+        Route::post('/v1/analisisFiltrado', [HistoriaClinicaController::class, 'analisisFiltrado']);
+        Route::get('/v1/filtrosAnalisis', [HistoriaClinicaController::class, 'filtrosAnalisis']);
+
+        Route::post('/v1/diasAsignadosRestantes', [PlanManejoProcedimientoController::class, 'diasAsignadosRestantes']);
+        Route::get('/v1/administradores', [UserController::class, 'administradores']);
+        Route::get('/v1/secciones', [SeccionesController::class, 'index']);
+        Route::get('/v1/dashboard', [DashboardController::class, 'dashboard']);
+
+        // Traer grupos de tablas
+        Route::get('/v1/traeDatosHistoria', [HistoriaClinicaController::class, 'traeDatosHistoria']);
+        Route::get('/v1/traeDatosPlanManejo', [HistoriaClinicaController::class, 'traeDatosPlanManejo']);
+        Route::get('/v1/traePacientes', [PacienteController::class, 'traePacientes']);
+        Route::get('/v1/traeKardex', [PacienteController::class, 'traeKardex']);
+        Route::get('/v1/traeProfesionales', [ProfesionalController::class, 'traeProfesionales']);
+
+        // Generacion de PDF
+        Route::post('/v1/exportarPdf', [HistoriaClinicaController::class, 'exportarPdf']);
+        Route::get('/v1/Nota/{id}/pdf', [NotaController::class, 'imprimir']);
+        Route::get('/v1/Terapia/{id}/pdf', [TerapiaController::class, 'imprimir']);
+        Route::get('/v1/Evolucion/{id}/pdf', [HistoriaClinicaController::class, 'imprimirEvolucion']);
+        Route::get('/v1/Trabajo Social/{id}/pdf', [HistoriaClinicaController::class, 'imprimirTrabajoSocial']);
+        Route::get('/v1/Medicina/{id}/pdf', [HistoriaClinicaController::class, 'imprimirMedicina']);
+        Route::get('/v1/Formula/{id}/pdf', [PlanManejoMedicamentoController::class, 'imprimirFormulaMedica']);
+        Route::get('/v1/Tratamiento/{id}/pdf', [PlanManejoMedicamentoController::class, 'imprimirTratamiento']);
+
+        //Permisos
+        Route::post('/v1/solicitarPermiso', [ProfesionalHasPermisosController::class, 'solicitarPermiso']);
+        Route::post('/v1/aprobarPermiso', [ProfesionalHasPermisosController::class, 'aprobarPermiso']);
+        Route::post('/v1/verificarPermisos', [ProfesionalHasPermisosController::class, 'verificarPermisos']);
+        Route::post('/v1/consumirPermiso', [ProfesionalHasPermisosController::class, 'consumirPermiso']);
+
+        //Importaciones
+        Route::post('/v1/importarInsumos', [InsumoController::class, 'importar']);
+        Route::post('/v1/insumosPrestados', [MovimientoController::class, 'insumosPrestados']);
+        Route::get('/v1/imprimirComoDato/{id}', [PlanManejoMedicamentoController::class, 'imprimirComodato']);
+});
