@@ -1,3 +1,8 @@
+@php
+// Decodificar el JSON a un array asociativo
+$signos = json_decode($examenFisico->signosVitales, true);
+@endphp
+
 <head>
     <meta charset="UTF-8">
     <style>
@@ -248,7 +253,7 @@
     </style>
 </head>
 
-<body class="bodyPDF">
+<div class="bodyPDF">
     <!-- ENCABEZADO -->
     <header>
 
@@ -332,7 +337,7 @@
 
                             <td width="30%">
                                 <strong>Tipo:</strong>
-                                Trabajo Social
+                                Medicina
                             </td>
 
                         </tr>
@@ -345,6 +350,7 @@
         </table>
 
     </header>
+
     <!-- DATOS DEL PACIENTE -->
     <h3>DATOS DEL PACIENTE</h3>
     <table>
@@ -400,7 +406,7 @@
     <div style="margin-bottom: 20px;">
         <h3
             style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
-            TRABAJO SOCIAL
+            EVOLUCIÓN
         </h3>
         <div style="margin-bottom: 20px; font-size:10px;">
             <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">Motivo de
@@ -411,17 +417,67 @@
         </div>
     </div>
 
+    <div style="margin-bottom: 20px;">
+        <div style="margin-bottom: 20px; font-size:10px;">
+            <h3 class="diagHeader" style=" padding: 8px; border: 1px solid #ddd; text-align: center;">ENFERMEDAD ACTUAL</h3>
+            <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
+                {{ $enfermedades->valor }}
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+            <tr class="diagHeader">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Antecedentes</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Tipo</th>
+            </tr>
+            @forelse($antecedentes as $antecedente)
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $antecedente->descripcion }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $antecedente->tipo }}</td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="2" style="padding: 8px; border: 1px solid #ddd;">Sin antecedentes registrados</td>
+            </tr>
+            @endforelse
+        </table>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3
+            style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
+            EXAMEN FÍSICO
+        </h3>
+        <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+            <tr class="diagHeader"">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">TA</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">FC</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">FR</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">T</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">SAT o2</th>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $signos['ta'] ?? 'N/A' }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $signos['fc'] ?? 'N/A' }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $signos['fr'] ?? 'N/A' }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $signos['t'] ?? 'N/A' }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $signos['SATo2'] ?? 'N/A' }}</td>
+            </tr>
+        </table>
+    </div>
+
     <!-- EVOLUCION -->
     <div style="margin-bottom: 20px;">
         <div style="margin-bottom: 20px; font-size:10px;">
-            <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">ANÁLISIS /
-                TRATAMIENTOS</h3>
+            <h3 class="diagHeader" style=" padding: 8px; border: 1px solid #ddd; text-align: center;">ANÁLISIS /
+                TRATAMIENTO</h3>
             <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
                 {{ $analisis->analisis }}
             </div>
         </div>
     </div>
-
 
     <!-- FIRMA Y SELLO -->
     <table style="margin-top:40px;">
@@ -441,4 +497,5 @@
         </tr>
     </table>
 
-</body>
+
+</div>

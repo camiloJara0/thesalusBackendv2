@@ -264,9 +264,9 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
                 <td width="22%" rowspan="2" class="logo-box">
 
                     @if($convenios && $convenios->logo && Storage::exists($convenios->logo))
-                    <img src="{{ public_path('storage/'.$convenios->logo) }}">
+                    <img src="{{ public_path('storage/'.$convenios->logo) }}" style="width:60px; height:auto;">
                     @else
-                    <img src="{{ public_path('logo.png') }}">
+                    <img src="{{ public_path('logo.png') }}" style="width:60px; height:auto;">
                     @endif
 
                     <div class="company-name">

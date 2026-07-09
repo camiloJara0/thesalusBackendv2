@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Clegginabox\PDFMerger\PDFMerger;
 use Mpdf\Mpdf;
+use Carbon\Carbon;
 use App\Models\Historia_Clinica;
 use App\Models\Analisis;
 use App\Models\Diagnostico;
@@ -1059,6 +1060,46 @@ class HistoriaClinicaController extends Controller
 
     public function exportarPdf(Request $request)
     {
+
+    $fechaInicio = $request->fechaInicio;
+    $fechaFin = $request->fechaFin;
+    $idPaciente = $request->id_paciente;
+    $idProfesional = $request->id_profesional;
+    $servicio = $request->servicio;
+
+    $query = Analisis::query();
+
+    // Filtro por fecha
+    $query->whereBetween('created_at', [
+        Carbon::parse($fechaInicio)->startOfDay(),
+        Carbon::parse($fechaFin)->endOfDay()
+    ]);
+
+    // Filtro por profesional
+    if (!empty($idProfesional)) {
+        $query->whereHas('profesional', function ($q) use ($idProfesional) {
+            $q->where('id', $idProfesional);
+        });
+    }
+
+    // Filtro por paciente
+    if (!empty($idPaciente)) {
+        $query->whereHas('historia', function ($q) use ($idPaciente) {
+            $q->where('id_paciente', $idPaciente);
+        });
+    }
+
+    // Filtro por servicio
+    if (!empty($servicio)) {
+        $query->whereHas('servicio', function ($q) use ($servicio) {
+            $q->where('plantilla', $servicio);
+        });
+    }
+
+    $analisisList = $query->get();
+
+
+        
         $mpdf = new Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4'
@@ -1069,11 +1110,11 @@ class HistoriaClinicaController extends Controller
         $indiceNotas = [];
 
         // ✅ Construir índice
-        foreach ($request->ids as $id) {
+        foreach ($analisisList as $analisis) {
             $indiceNotas[] = [
-                'id' => $id,
-                'titulo' => "Nota Médica #$id",
-                'anchor' => "nota_$id"
+                'id' => $analisis->id,
+                'titulo' => "Nota Médica #$analisis->id",
+                'anchor' => "nota_$analisis->id"
             ];
         }
 
@@ -1083,12 +1124,10 @@ class HistoriaClinicaController extends Controller
         $html .= "<pagebreak>";
 
         // ✅ Recorrer análisis
-        foreach ($request->ids as $id) {
-
-            $analisis = Analisis::with('servicio')->find($id);
-            if (!$analisis) continue;
+        foreach ($analisisList as $analisis) {
 
             $historia = Historia_Clinica::find($analisis->id_historia);
+            $id = $analisis->id;
 
             $paciente = DB::table('pacientes')
                 ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
@@ -1123,17 +1162,17 @@ class HistoriaClinicaController extends Controller
             switch ($request->servicio) {
 
                 case 'Evolucion':
-                    $view = 'pdf.evolucion';
+                    $view = 'pdf.IndiceEvolucion';
                     $data = compact('paciente','profesional','diagnosticos','analisis','medicamentos','convenios');
                     break;
 
                 case 'Trabajo Social':
-                    $view = 'pdf.trabajoSocial';
+                    $view = 'pdf.IndiceTrabajoSocial';
                     $data = compact('paciente','profesional','diagnosticos','analisis','medicamentos','convenios');
                     break;
 
                 case 'Medicina':
-                    $view = 'pdf.medicina';
+                    $view = 'pdf.IndiceMedicina';
                     $data = compact(
                         'paciente','profesional','diagnosticos','analisis',
                         'antecedentes','examenFisico','medicamentos','procedimientos','convenios','enfermedades'
@@ -1144,7 +1183,7 @@ class HistoriaClinicaController extends Controller
                     $nota = DB::table('notas')->where('id_analisis', $analisis->id)->first();
                     $descripcion = DB::table('descripcion_nota')->where('id_nota', $nota->id)->get();
 
-                    $view = 'pdf.nota';
+                    $view = 'pdf.IndiceNota';
                     $data = compact('nota','paciente','profesional','diagnosticos','descripcion','analisis','convenios');
                     break;
 
@@ -1153,7 +1192,7 @@ class HistoriaClinicaController extends Controller
                     $diagnosticosCIF = DB::table('diagnostico_relacionados')
                         ->where('id_analisis', $terapia->id_analisis)->get();
 
-                    $view = 'pdf.terapia';
+                    $view = 'pdf.IndiceTerapia';
                     $data = compact('terapia','paciente','profesional','diagnosticos','diagnosticosCIF','analisis','convenios');
                     break;
 
@@ -1165,19 +1204,19 @@ class HistoriaClinicaController extends Controller
             $html .= view($view, $data)->render();
 
             // ✅ Adjuntos dentro del MISMO documento
-            if ($medicamentos->count() > 0) {
-                $html .= "<pagebreak>";
-                $html .= view('pdf.formulaMedica', compact(
-                    'paciente','profesional','medicamentos','analisis','convenios'
-                ))->render();
-            }
+            // if ($medicamentos->count() > 0) {
+            //     $html .= "<pagebreak>";
+            //     $html .= view('pdf.formulaMedica', compact(
+            //         'paciente','profesional','medicamentos','analisis','convenios'
+            //     ))->render();
+            // }
 
-            if ($request->servicio == 'Medicina' && $procedimientos->count() > 0) {
-                $html .= "<pagebreak>";
-                $html .= view('pdf.planProcedimientos', compact(
-                    'paciente','profesional','procedimientos','analisis','convenios'
-                ))->render();
-            }
+            // if ($request->servicio == 'Medicina' && $procedimientos->count() > 0) {
+            //     $html .= "<pagebreak>";
+            //     $html .= view('pdf.planProcedimientos', compact(
+            //         'paciente','profesional','procedimientos','analisis','convenios'
+            //     ))->render();
+            // }
 
             // ✅ salto de página entre notas
             $html .= "<pagebreak>";

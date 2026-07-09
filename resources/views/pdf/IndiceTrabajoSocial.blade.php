@@ -248,7 +248,7 @@
     </style>
 </head>
 
-<body class="bodyPDF">
+<div class="bodyPDF">
     <!-- ENCABEZADO -->
     <header>
 
@@ -441,4 +441,4 @@
         </tr>
     </table>
 
-</body>
+</div>

@@ -248,7 +248,7 @@
     </style>
 </head>
 
-<body class="bodyPDF">
+<div class="bodyPDF">
     <!-- ENCABEZADO -->
     <header>
 
@@ -332,7 +332,7 @@
 
                             <td width="30%">
                                 <strong>Tipo:</strong>
-                                Trabajo Social
+                                Evolución
                             </td>
 
                         </tr>
@@ -345,6 +345,7 @@
         </table>
 
     </header>
+
     <!-- DATOS DEL PACIENTE -->
     <h3>DATOS DEL PACIENTE</h3>
     <table>
@@ -400,7 +401,7 @@
     <div style="margin-bottom: 20px;">
         <h3
             style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
-            TRABAJO SOCIAL
+            EVOLUCIÓN
         </h3>
         <div style="margin-bottom: 20px; font-size:10px;">
             <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">Motivo de
@@ -411,14 +412,14 @@
         </div>
     </div>
 
+
     <!-- EVOLUCION -->
-    <div style="margin-bottom: 20px;">
-        <div style="margin-bottom: 20px; font-size:10px;">
-            <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">ANÁLISIS /
-                TRATAMIENTOS</h3>
-            <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
-                {{ $analisis->analisis }}
-            </div>
+
+    <div style="margin-bottom: 20px; font-size:10px;">
+        <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">RECOMENDACIONES
+        </h3>
+        <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
+            {{ $analisis->analisis }}
         </div>
     </div>
 
@@ -440,5 +441,4 @@
             </td>
         </tr>
     </table>
-
-</body>
+</div>

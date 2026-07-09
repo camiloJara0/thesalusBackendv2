@@ -248,7 +248,7 @@
     </style>
 </head>
 
-<body class="bodyPDF">
+<div class="bodyPDF">
     <!-- ENCABEZADO -->
     <header>
 
@@ -277,7 +277,7 @@
                     </div>
 
                     <div class="header-subtitle">
-                        {{ strtoupper($analisis->servicio->name) }}
+                        {{ strtoupper($analisis->nombreServicio) }}
                     </div>
 
                 </td>
@@ -332,7 +332,7 @@
 
                             <td width="30%">
                                 <strong>Tipo:</strong>
-                                Trabajo Social
+                                Terapia
                             </td>
 
                         </tr>
@@ -397,16 +397,40 @@
         </table>
     </div>
 
+    <!-- DIAGNÓSTICOS RELACIONADOS -->
     <div style="margin-bottom: 20px;">
         <h3
             style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
-            TRABAJO SOCIAL
+            DIAGNÓSTICOS RELACIONADOS
+        </h3>
+        <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+            <tr class="noteBox">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Diagnóstico</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left; width: 15%;">CIF</th>
+            </tr>
+            @forelse($diagnosticosCIF as $diag)
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $diag->descripcion }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $diag->codigo }}</td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="2" style="padding: 8px; border: 1px solid #ddd;">Sin diagnósticos CIF registrados</td>
+            </tr>
+            @endforelse
+        </table>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3
+            style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
+            TERAPIA   {{ $analisis->nombreServicio }}
         </h3>
         <div style="margin-bottom: 20px; font-size:10px;">
-            <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">Motivo de
-                consulta</h3>
+            <h3 class="noteItem" style="padding: 8px; border: 1px solid #ddd; text-align: center;">Objetivos de la intervecion
+                    terapeutica</h3>
             <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
-                {{ $analisis->motivo }}
+                {{ $terapia->objetivos }}
             </div>
         </div>
     </div>
@@ -414,10 +438,15 @@
     <!-- EVOLUCION -->
     <div style="margin-bottom: 20px;">
         <div style="margin-bottom: 20px; font-size:10px;">
-            <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">ANÁLISIS /
-                TRATAMIENTOS</h3>
+            <h3 class="noteItem" style="padding: 8px; border: 1px solid #ddd; text-align: center;">Evolucion (condición inicial, objetivo de la sesión, técnica método y/o intervención que se realice, condicion final)</h3>
             <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
-                {{ $analisis->analisis }}
+                <span class=label>Numero de Sesion:</span> {{ $terapia->sesion }}
+            </div>
+            <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
+                <span class=label>Fecha y Hora:</span> {{ $terapia->fecha }} , {{ $terapia->hora }}
+            </div>
+            <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
+                {{ $terapia->evolucion }}
             </div>
         </div>
     </div>
@@ -440,5 +469,4 @@
             </td>
         </tr>
     </table>
-
-</body>
+</div>

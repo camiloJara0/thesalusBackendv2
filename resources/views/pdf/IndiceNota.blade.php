@@ -1,3 +1,8 @@
+@php
+$tiposOrden = ["subjetivo", "objetivo", "actividades", "plan", "intervencion", "evaluacion"];
+$agrupadoPorTipo = $descripcion->groupBy('tipo');
+@endphp
+
 <head>
     <meta charset="UTF-8">
     <style>
@@ -248,7 +253,7 @@
     </style>
 </head>
 
-<body class="bodyPDF">
+<div class="bodyPDF">
     <!-- ENCABEZADO -->
     <header>
 
@@ -277,7 +282,7 @@
                     </div>
 
                     <div class="header-subtitle">
-                        {{ strtoupper($analisis->servicio->name) }}
+                        {{ strtoupper($analisis->nombreServicio) }}
                     </div>
 
                 </td>
@@ -298,7 +303,7 @@
 
                         <tr>
                             <td><strong>Fecha</strong></td>
-                            <td style="color: #000;">{{ \Carbon\Carbon::parse($analisis->created_at)->format('Y/m/d') ?? now()->format('Y-m-d') }}</td>
+                            <td style="color: #000;">{{ $nota->fecha_nota ?? now()->format('Y-m-d') }}</td>
                         </tr>
 
                         <tr>
@@ -332,7 +337,7 @@
 
                             <td width="30%">
                                 <strong>Tipo:</strong>
-                                Trabajo Social
+                                Nota de Enfermería
                             </td>
 
                         </tr>
@@ -345,6 +350,7 @@
         </table>
 
     </header>
+
     <!-- DATOS DEL PACIENTE -->
     <h3>DATOS DEL PACIENTE</h3>
     <table>
@@ -397,38 +403,52 @@
         </table>
     </div>
 
+
+    <!-- NOTA DE ENFERMERÍA -->
     <div style="margin-bottom: 20px;">
         <h3
             style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
-            TRABAJO SOCIAL
+            NOTA DE ENFERMERÍA
         </h3>
-        <div style="margin-bottom: 20px; font-size:10px;">
-            <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">Motivo de
-                consulta</h3>
-            <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
-                {{ $analisis->motivo }}
+        <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; display: flex; gap: 5px;">
+            <div
+                style="display: flex; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+                <strong style="font-size: 10px; width: 80px;">Fecha:</strong>
+                <div style="flex: 1; border-left: 1px solid #ddd; padding-left: 10px;">
+                    <p style="font-size: 10px; width: 80px; margin: 0;">{{ $nota->fecha_nota }}</p>
+                </div>
             </div>
-        </div>
-    </div>
+            <div class="noteBox" style="display: flex; gap: 10px;">
+                <div style="flex: 1; border-left: 1px solid #ddd; padding-left: 10px; font-size: 9px;">
+                    @foreach($tiposOrden as $tipo)
+                    @php
+                    $notasTipo = $agrupadoPorTipo[$tipo] ?? collect();
+                    $notasTipo = $notasTipo->sortBy('hora');
+                    @endphp
 
-    <!-- EVOLUCION -->
-    <div style="margin-bottom: 20px;">
-        <div style="margin-bottom: 20px; font-size:10px;">
-            <h3 class="diagHeader" style="padding: 8px; border: 1px solid #ddd; text-align: center;">ANÁLISIS /
-                TRATAMIENTOS</h3>
-            <div style="text-align: justify; padding: 10px; border: 1px solid #ddd;">
-                {{ $analisis->analisis }}
+                    @if($notasTipo->isNotEmpty())
+                    <p class="noteSection text-start text-xs py-1"><strong>{{ strtoupper($tipo) }}:</strong></p>
+                    @foreach($notasTipo as $n)
+                    <div class=noteItem class="flex">
+                        <p class="text-xs border-r-1 px-3 py-1 noteHour">{{ $n->hora ?? '' }}</p>
+                        <p class="text-xs w-full px-1 noteText">{{ $n->descripcion ?? '' }}</p>
+                    </div>
+                    @endforeach
+                    <hr class="w-full h-1" />
+                    @endif
+                    @endforeach
+                </div>
             </div>
         </div>
     </div>
 
 
     <!-- FIRMA Y SELLO -->
-    <table style="margin-top:40px;">
+    <table class="signature" style="margin-top:40px;">
         <tr>
             <td style="text-align:center; border-top:1px solid #000;">
-                <p><strong>{{ $profesional->name }}</strong></p>
-                <p>{{ $profesional->No_document }}</p>
+                <p class="signatureName"><strong>{{ $profesional->name }}</strong></p>
+                <p class="signatureDoc">{{ $profesional->No_document }}</p>
             </td>
             <td style="text-align:center; border-top:1px solid #000;">
                 @if($profesional->sello)
@@ -440,5 +460,4 @@
             </td>
         </tr>
     </table>
-
-</body>
+</div>
