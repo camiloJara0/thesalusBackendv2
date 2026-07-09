@@ -115,7 +115,7 @@ class HistoriaClinicaController extends Controller
                 $q->where('id_paciente', $request->id);
             })
             ->orderBy('id', 'desc')
-            ->limit(20)
+            ->limit(30)
             ->get();
         }
 

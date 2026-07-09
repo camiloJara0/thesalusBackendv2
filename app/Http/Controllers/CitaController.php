@@ -50,12 +50,21 @@ class CitaController extends Controller
 
     public function citasPaginadas(Request $request)
     {
-        $ultimoId  = $request->input('ultimo_id', 0); // último id que ya tiene el cliente
+        $ultimoId  = $request->input('ultimo_id', 0);
         $porPagina = $request->input('por_pagina', 50);
 
-        $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
-            ->where('id', '>', $ultimoId)
-            ->orderBy('id')
+        $query = Cita::with([
+            'paciente.infoUsuario',
+            'profesional.infoUsuario',
+            'servicio'
+        ]);
+
+        if ($ultimoId > 0) {
+            $query->where('id', '<', $ultimoId);
+        }
+
+        $citas = $query
+            ->orderBy('id', 'desc')
             ->limit($porPagina)
             ->get();
 
