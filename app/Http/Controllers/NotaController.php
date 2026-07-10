@@ -218,7 +218,6 @@ class NotaController extends Controller
             ->header('Access-Control-Expose-Headers', 'Content-Disposition')
             ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
 
-
         // return $pdf->stream('nota.pdf'); // mostrar en navegador
         // return $pdf->download('nota.pdf'); // descargar directamente
     }

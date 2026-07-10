@@ -123,8 +123,9 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
 
         // Traer grupos de tablas
         Route::get('/v1/traeDatosHistoria', [HistoriaClinicaController::class, 'traeDatosHistoria']);
+        Route::post('/v1/pacientesConHistoria', [HistoriaClinicaController::class, 'pacientesConHistoria']);
         Route::get('/v1/traeDatosPlanManejo', [HistoriaClinicaController::class, 'traeDatosPlanManejo']);
-        Route::get('/v1/traePacientes', [PacienteController::class, 'traePacientes']);
+        Route::post('/v1/traePacientes', [PacienteController::class, 'traePacientes']);
         Route::get('/v1/traeKardex', [PacienteController::class, 'traeKardex']);
         Route::get('/v1/traeProfesionales', [ProfesionalController::class, 'traeProfesionales']);
 

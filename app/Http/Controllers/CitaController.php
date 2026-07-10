@@ -31,6 +31,7 @@ class CitaController extends Controller
 
         $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
             ->whereBetween('fecha', [$inicio, $fin])
+            ->limit(200)
             ->get();
 
         return response()->json(['success' => true, 'data' => $citas]);

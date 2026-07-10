@@ -24,6 +24,7 @@ use App\Models\Descripcion_nota;
 use App\Models\Movimiento;
 use App\Models\Insumo;
 use App\Models\Paciente;
+use App\Models\Profesional;
 
 use Illuminate\Http\Request;
 
@@ -38,6 +39,32 @@ class HistoriaClinicaController extends Controller
     public function index()
     {
         $pacientes = Paciente::with('infoUsuario')
+            ->withExists('historiaClinica')
+            ->get();
+
+        $data = $pacientes->map(function ($paciente) {
+            return [
+                'id' => $paciente->id,
+                'paciente' => $paciente->infoUsuario->name ?? '',
+                'cedula' => $paciente->infoUsuario->No_document ?? '',
+                'estado' => $paciente->historia_clinica_exists ? 'Creada' : 'Nueva',
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
+    public function pacientesConHistoria(Request $request)
+    {
+
+        $pacientes = Paciente::with(['infoUsuario'])
+            ->where('estado', 1)
+            ->whereHas('citas', function ($query) use ($request) {
+                $query->where('id_medico', $request->id_profesional);
+            })
             ->withExists('historiaClinica')
             ->get();
 
@@ -1067,7 +1094,18 @@ class HistoriaClinicaController extends Controller
     $idProfesional = $request->id_profesional;
     $servicio = $request->servicio;
 
-    $query = Analisis::query();
+    $query = Analisis::with(
+        'servicio',
+        'historia',
+        'diagnosticos',
+        'enfermedad',
+        'examenFisico',
+        'medicamentos',
+        'procedimientos',
+        'nota.descripcionNota',
+        'terapia',
+        'profesional.infoUsuario'
+    );
 
     // Filtro por fecha
     $query->whereBetween('created_at', [
@@ -1098,137 +1136,278 @@ class HistoriaClinicaController extends Controller
 
     $analisisList = $query->get();
 
-
+    if($request->excel){
+        return response()->json([
+            'success' => true,
+            'data' => $analisisList
+        ], 200);
+    }
         
-        $mpdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4'
-        ]);
+$mpdf = new Mpdf([
+    'mode' => 'utf-8',
+    'format' => 'A4'
+]);
 
-        $html = "";
+$indiceNotas = [];
 
-        $indiceNotas = [];
+/*
+|--------------------------------------------------------------------------
+| Construcción índice
+|--------------------------------------------------------------------------
+*/
 
-        // ✅ Construir índice
-        foreach ($analisisList as $analisis) {
-            $indiceNotas[] = [
-                'id' => $analisis->id,
-                'titulo' => "Nota Médica #$analisis->id",
-                'anchor' => "nota_$analisis->id"
-            ];
+foreach ($analisisList as $analisis) {
+
+    $indiceNotas[] = [
+        'id' => $analisis->id,
+        'titulo' => "Nota Médica #{$analisis->id}",
+        'anchor' => "nota_{$analisis->id}"
+    ];
+}
+
+/*
+|--------------------------------------------------------------------------
+| Índice
+|--------------------------------------------------------------------------
+*/
+
+$mpdf->WriteHTML(
+    view('pdf.indiceNotas', compact('indiceNotas'))->render()
+);
+
+/*
+|--------------------------------------------------------------------------
+| Notas
+|--------------------------------------------------------------------------
+*/
+
+foreach ($analisisList as $analisis) {
+
+    $historia = Historia_Clinica::find($analisis->id_historia);
+
+    $id = $analisis->id;
+
+    $paciente = DB::table('pacientes')
+        ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
+        ->join('eps', 'pacientes.id_eps', '=', 'eps.id')
+        ->where('pacientes.id', $historia->id_paciente)
+        ->select(
+            'pacientes.*',
+            'informacion_users.*',
+            'eps.nombre as Eps'
+        )
+        ->first();
+
+    $profesional = DB::table('profesionals')
+        ->join('informacion_users', 'profesionals.id_infoUsuario', '=', 'informacion_users.id')
+        ->where('profesionals.id', $analisis->id_medico)
+        ->select(
+            'profesionals.*',
+            'informacion_users.*'
+        )
+        ->first();
+
+    $diagnosticos = DB::table('diagnosticos')
+        ->where('id_analisis', $analisis->id)
+        ->get();
+
+    $medicamentos = DB::table('plan_manejo_medicamentos')
+        ->where('id_analisis', $analisis->id)
+        ->get();
+
+    $procedimientos = DB::table('plan_manejo_procedimientos')
+        ->where('id_analisis', $analisis->id)
+        ->get();
+
+    $antecedentes = DB::table('antecedentes')
+        ->where('id_paciente', $historia->id_paciente)
+        ->get();
+
+    $examenFisico = DB::table('examen_fisicos')
+        ->where('id_analisis', $analisis->id)
+        ->first();
+
+    $enfermedades = DB::table('enfermedads')
+        ->where('id_analisis', $analisis->id)
+        ->first();
+
+    $convenios = DB::table('paciente_has_convenios')
+        ->where('id_paciente', $historia->id_paciente)
+        ->join(
+            'convenios',
+            'paciente_has_convenios.id_convenio',
+            '=',
+            'convenios.id'
+        )
+        ->select('convenios.*')
+        ->first();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Datos header
+    |--------------------------------------------------------------------------
+    */
+
+    $headerHtml = view('pdf.IndiceHeader', [
+        'servicio' => $analisis->servicio->name ?? $request->servicio,
+        'id'       => $analisis->id,
+        'fecha'    => \Carbon\Carbon::parse(
+            $analisis->created_at
+        )->format('Y/m/d'),
+        'nombre'   => $convenios->nombre ?? 'Santa Isabel IPS'
+    ])->render();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Header para esta nota
+    |--------------------------------------------------------------------------
+    */
+
+    $mpdf->SetHTMLHeader($headerHtml);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Selección de vista
+    |--------------------------------------------------------------------------
+    */
+
+    switch ($request->servicio) {
+
+        case 'Evolucion':
+
+            $view = 'pdf.IndiceEvolucion';
+            $data = compact(
+                'paciente',
+                'profesional',
+                'diagnosticos',
+                'analisis',
+                'medicamentos',
+                'convenios'
+            );
+
+            break;
+
+        case 'Trabajo Social':
+
+            $view = 'pdf.IndiceTrabajoSocial';
+            $data = compact(
+                'paciente',
+                'profesional',
+                'diagnosticos',
+                'analisis',
+                'medicamentos',
+                'convenios'
+            );
+
+            break;
+
+        case 'Medicina':
+
+            $view = 'pdf.IndiceMedicina';
+
+            $data = compact(
+                'paciente',
+                'profesional',
+                'diagnosticos',
+                'analisis',
+                'antecedentes',
+                'examenFisico',
+                'medicamentos',
+                'procedimientos',
+                'convenios',
+                'enfermedades'
+            );
+
+            break;
+
+        case 'Nota':
+
+            $nota = DB::table('notas')
+                ->where('id_analisis', $analisis->id)
+                ->first();
+
+            $descripcion = DB::table('descripcion_nota')
+                ->where('id_nota', $nota->id)
+                ->get();
+
+            $view = 'pdf.IndiceNota';
+
+            $data = compact(
+                'nota',
+                'paciente',
+                'profesional',
+                'diagnosticos',
+                'descripcion',
+                'analisis',
+                'convenios'
+            );
+
+            break;
+
+        case 'Terapia':
+
+            $terapia = DB::table('terapia')
+                ->where('id_analisis', $analisis->id)
+                ->first();
+
+            $diagnosticosCIF = DB::table('diagnostico_relacionados')
+                ->where('id_analisis', $terapia->id_analisis)
+                ->get();
+
+            $view = 'pdf.IndiceTerapia';
+
+            $data = compact(
+                'terapia',
+                'paciente',
+                'profesional',
+                'diagnosticos',
+                'diagnosticosCIF',
+                'analisis',
+                'convenios'
+            );
+
+            break;
+
+        default:
+
+            return response()->json([
+                'error' => 'Servicio no válido'
+            ], 400);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Nueva página
+    |--------------------------------------------------------------------------
+    */
+
+    $mpdf->AddPage();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ancla para índice + contenido
+    |--------------------------------------------------------------------------
+    */
+
+    $contenido = "<a name='nota_{$id}'></a>";
+    $contenido .= view($view, $data)->render();
+
+    $mpdf->WriteHTML($contenido);
+}
+        if($request->id_paciente){
+            $paciente = Paciente::where('id', $request->id_paciente)->with('infoUsuario')->first();
+            $fileName = strtoupper($request->servicio) . '_PACIENTE_' . $paciente->infoUsuario->name . '.pdf';
+        } else if($request->id_profesional) {
+            $paciente = Profesional::where('id', $request->id_profesional)->with('infoUsuario')->first();
+            $fileName = strtoupper($request->servicio) . '_PROFESIONAL_' . $paciente->infoUsuario->name . '.pdf';
+        } else {
+            $fileName = strtoupper($request->servicio) . '_GENERAL.pdf';
         }
-
-        // ✅ Renderizar índice con Blade (tu plantilla existente)
-        $html .= view('pdf.indiceNotas', compact('indiceNotas'))->render();
-
-        $html .= "<pagebreak>";
-
-        // ✅ Recorrer análisis
-        foreach ($analisisList as $analisis) {
-
-            $historia = Historia_Clinica::find($analisis->id_historia);
-            $id = $analisis->id;
-
-            $paciente = DB::table('pacientes')
-                ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
-                ->join('eps', 'pacientes.id_eps', '=', 'eps.id')
-                ->where('pacientes.id', $historia->id_paciente)
-                ->select('pacientes.*', 'informacion_users.*', 'eps.nombre as Eps')
-                ->first();
-
-            $profesional = DB::table('profesionals')
-                ->join('informacion_users', 'profesionals.id_infoUsuario', '=', 'informacion_users.id')
-                ->where('profesionals.id', $analisis->id_medico)
-                ->select('profesionals.*', 'informacion_users.*')
-                ->first();
-
-            $diagnosticos = DB::table('diagnosticos')->where('id_analisis', $analisis->id)->get();
-            $medicamentos = DB::table('plan_manejo_medicamentos')->where('id_analisis', $analisis->id)->get();
-            $procedimientos = DB::table('plan_manejo_procedimientos')->where('id_analisis', $analisis->id)->get();
-            $antecedentes = DB::table('antecedentes')->where('id_paciente', $historia->id_paciente)->get();
-            $examenFisico = DB::table('examen_fisicos')->where('id_analisis', $analisis->id)->first();
-            $enfermedades = DB::table('enfermedads')->where('id_analisis', $analisis->id)->first();
-
-            $convenios = DB::table('paciente_has_convenios')
-                ->where('id_paciente', $historia->id_paciente)
-                ->join('convenios', 'paciente_has_convenios.id_convenio', '=', 'convenios.id')
-                ->select('convenios.*')
-                ->first();
-
-            // ✅ Anchor destino (IMPORTANTE para el click)
-            $html .= "<a name='nota_$id'></a>";
-
-            // ✅ Selección de vista (igual que ya tienes)
-            switch ($request->servicio) {
-
-                case 'Evolucion':
-                    $view = 'pdf.IndiceEvolucion';
-                    $data = compact('paciente','profesional','diagnosticos','analisis','medicamentos','convenios');
-                    break;
-
-                case 'Trabajo Social':
-                    $view = 'pdf.IndiceTrabajoSocial';
-                    $data = compact('paciente','profesional','diagnosticos','analisis','medicamentos','convenios');
-                    break;
-
-                case 'Medicina':
-                    $view = 'pdf.IndiceMedicina';
-                    $data = compact(
-                        'paciente','profesional','diagnosticos','analisis',
-                        'antecedentes','examenFisico','medicamentos','procedimientos','convenios','enfermedades'
-                    );
-                    break;
-
-                case 'Nota':
-                    $nota = DB::table('notas')->where('id_analisis', $analisis->id)->first();
-                    $descripcion = DB::table('descripcion_nota')->where('id_nota', $nota->id)->get();
-
-                    $view = 'pdf.IndiceNota';
-                    $data = compact('nota','paciente','profesional','diagnosticos','descripcion','analisis','convenios');
-                    break;
-
-                case 'Terapia':
-                    $terapia = DB::table('terapia')->where('id_analisis', $analisis->id)->first();
-                    $diagnosticosCIF = DB::table('diagnostico_relacionados')
-                        ->where('id_analisis', $terapia->id_analisis)->get();
-
-                    $view = 'pdf.IndiceTerapia';
-                    $data = compact('terapia','paciente','profesional','diagnosticos','diagnosticosCIF','analisis','convenios');
-                    break;
-
-                default:
-                    return response()->json(['error' => 'Servicio no válido'], 400);
-            }
-
-            // ✅ Renderizar tu plantilla existente
-            $html .= view($view, $data)->render();
-
-            // ✅ Adjuntos dentro del MISMO documento
-            // if ($medicamentos->count() > 0) {
-            //     $html .= "<pagebreak>";
-            //     $html .= view('pdf.formulaMedica', compact(
-            //         'paciente','profesional','medicamentos','analisis','convenios'
-            //     ))->render();
-            // }
-
-            // if ($request->servicio == 'Medicina' && $procedimientos->count() > 0) {
-            //     $html .= "<pagebreak>";
-            //     $html .= view('pdf.planProcedimientos', compact(
-            //         'paciente','profesional','procedimientos','analisis','convenios'
-            //     ))->render();
-            // }
-
-            // ✅ salto de página entre notas
-            $html .= "<pagebreak>";
-        }
-
-        // ✅ Generar PDF
-        $mpdf->WriteHTML($html);
-
-        $fileName = strtoupper($request->servicio) . '_GENERAL.pdf';
 
         return response($mpdf->Output($fileName, 'S'), 200)
             ->header('Content-Type', 'application/pdf')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Expose-Headers', 'Content-Disposition')
             ->header('Content-Disposition', "attachment; filename=\"$fileName\"");
     }
 }
