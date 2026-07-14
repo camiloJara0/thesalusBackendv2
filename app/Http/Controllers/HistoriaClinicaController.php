@@ -240,7 +240,7 @@ class HistoriaClinicaController extends Controller
             ]);
         }
 
-        if ($request->filled('mes')) {
+        if ($request->filled('fecha_mes')) {
             $query->whereMonth('created_at', $request->mes);
         }
 
