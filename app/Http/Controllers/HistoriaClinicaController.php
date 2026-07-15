@@ -241,11 +241,11 @@ class HistoriaClinicaController extends Controller
         }
 
         if ($request->filled('fecha_mes')) {
-            $query->whereMonth('created_at', $request->mes);
+            $query->whereMonth('created_at', $request->fecha_mes);
         }
 
         if ($request->filled('fecha_año')) {
-            $query->whereYear('created_at', $request->anio);
+            $query->whereYear('created_at', $request->fecha_año);
         }
 
         if ($request->filled('profesional')) {
