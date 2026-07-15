@@ -39,6 +39,7 @@ class HistoriaClinicaController extends Controller
     public function index()
     {
         $pacientes = Paciente::with('infoUsuario')
+            ->where('estado', 1)
             ->withExists('historiaClinica')
             ->get();
 

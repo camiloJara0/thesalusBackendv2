@@ -203,9 +203,9 @@ class ProfesionalController extends Controller
             'selloFile' => 'nullable|file|mimes:png,jpg,jpeg,webp|max:5120',
         ]);
 
-        $informacionUser = InformacionUser::where('No_document', $request->No_document)->first();
+        $informacionUser = InformacionUser::where('id', $request->id_infoUsuario)->first();
 
-        $usuario = $informacionUser ? User::where('id_infoUsuario', $informacionUser->id)->first() : null;
+        $usuario = User::where('id_infoUsuario', $informacionUser->id)->first();
         if($usuario->correo != $request->correo){
             $correo = User::where('correo', $request->correo)->first();
             if($correo){
