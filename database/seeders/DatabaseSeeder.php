@@ -17,5 +17,9 @@ class DatabaseSeeder extends Seeder
         $this->call(EmpresaUsuarioSeeder::class);
         $this->call(PermisosSeeder::class);
         $this->call(EPSSeeder::class);
+
+        // Kardex dinámico (ejecutar después de migrate)
+        $this->call(KardexPlantillasSeeder::class);
+        $this->call(MigrarKardexDatosSeeder::class);
     }
 }

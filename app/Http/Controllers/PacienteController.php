@@ -33,6 +33,18 @@ class PacienteController extends Controller
         ], 201);
     }
 
+    public function pacientesInactivos()
+    {
+        $paciente = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 0)->get();
+        foreach ($paciente as $p) {
+            $convenio = $p->convenios->first(); // devuelve el primer convenio o null
+        }
+        return response()->json([
+            'success' => true,
+            'data' => $paciente
+        ], 201);
+    }
+
     public function traePacientes(Request $request)
     {
         $pacientes = Paciente::with(['infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos'])
@@ -376,6 +388,7 @@ class PacienteController extends Controller
         $paciente->sexo = $request->sexo;
         $paciente->regimen = $request->regimen;
         $paciente->vulnerabilidad = $request->vulnerabilidad;
+        $paciente->estado = $request->estado;
         $paciente->save();
 
         $idsEnviados = collect($data['plan_manejo_procedimientos'] ?? [])->pluck('id')->filter()->toArray();

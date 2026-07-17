@@ -33,5 +33,9 @@ class Paciente extends Model
     {
         return $this->hasMany(Historia_Clinica::class, 'id_paciente');
     }
+    public function kardexRegistros()
+    {
+        return $this->hasMany(KardexRegistro::class, 'id_paciente');
+    }
 }
 

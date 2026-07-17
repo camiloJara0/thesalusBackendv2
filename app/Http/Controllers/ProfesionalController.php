@@ -34,6 +34,18 @@ class ProfesionalController extends Controller
         ], 200);
     }
 
+    public function profesionalesInactivos()
+    {
+        $profesionales = Profesional::with('infoUsuario', 'profesion', 'user:id_infoUsuario,correo')
+        ->where('profesionals.estado', 0)
+        ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $profesionales
+        ], 200);
+    }
+
     public function traeProfesionales()
     {
         $profesionales = Profesional::select('profesionals.*', 'users.correo', 'profesions.nombre as nombreProfesion')
@@ -252,6 +264,7 @@ class ProfesionalController extends Controller
             $profesional->zona_laboral = $request->zona_laboral;
             $profesional->departamento_laboral = $request->departamento_laboral;
             $profesional->municipio_laboral = $request->municipio_laboral;
+            $profesional->estado = $request->estado;
 
         // Manejo del sello (imagen)
         if ($request->hasFile('selloFile') && $request->file('selloFile')->isValid()) {

@@ -92,7 +92,25 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::apiResource('/v1/cie10', Cie10Controller::class);
         Route::apiResource('/v1/insumos', InsumoController::class);
         Route::apiResource('/v1/movimientos', MovimientoController::class);
-        Route::apiResource('/v1/kardex', KardexController::class);
+        // Route::apiResource('/v1/kardex', KardexController::class);
+
+        // Kardex dinámico
+        Route::get('/v1/kardex/plantilla', [KardexController::class, 'plantillas']);
+        Route::get('/v1/kardex/plantilla/{id}', [KardexController::class, 'plantillaCampos']);
+        Route::get('/v1/kardex/registros/{idPaciente}', [KardexController::class, 'registrosPaciente']);
+        Route::post('/v1/kardex/registrosPlantilla', [KardexController::class, 'registrosPlantilla']);
+        Route::post('/v1/kardex/registros', [KardexController::class, 'guardarRegistros']);
+        Route::post('/v1/kardex/historialCambioSonda', [KardexController::class, 'storeHistorialCambioSonda']);
+        Route::post('/v1/kardex/campo', [KardexController::class, 'storeCampo']);
+        Route::get('/v1/kardex/campo', [KardexController::class, 'getCampos']);
+        Route::put('/v1/kardex/campo/{id}', [KardexController::class, 'updateCampo']);
+        Route::delete('/v1/kardex/campo/{id}', [KardexController::class, 'destroyCampo']);
+        Route::post('/v1/kardex/plantilla', [KardexController::class, 'storePlantilla']);
+        Route::delete('/v1/kardex/plantilla/{id}', [KardexController::class, 'destroyPlantilla']);
+        Route::put('/v1/kardex/plantilla/{id}', [KardexController::class, 'updatePlantilla']);
+        Route::post('/v1/kardex/plantilla/{idPlantilla}/campo', [KardexController::class, 'addCampoPlantilla']);
+        Route::delete('/v1/kardex/plantilla/{idPlantilla}/campo/{idCampo}', [KardexController::class, 'removeCampoPlantilla']);
+
         Route::apiResource('/v1/historialCambioSonda', HistorialCambioSondaController::class);
         Route::apiResource('/v1/profesionalHasPermisos', ProfesionalHasPermisosController::class);
         Route::apiResource('/v1/celdaColors', CeldaColorController::class);
@@ -126,8 +144,10 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::post('/v1/pacientesConHistoria', [HistoriaClinicaController::class, 'pacientesConHistoria']);
         Route::get('/v1/traeDatosPlanManejo', [HistoriaClinicaController::class, 'traeDatosPlanManejo']);
         Route::post('/v1/traePacientes', [PacienteController::class, 'traePacientes']);
+        Route::get('/v1/pacientesInactivos', [PacienteController::class, 'pacientesInactivos']);
         Route::get('/v1/traeKardex', [PacienteController::class, 'traeKardex']);
         Route::get('/v1/traeProfesionales', [ProfesionalController::class, 'traeProfesionales']);
+        Route::get('/v1/profesionalesInactivos', [ProfesionalController::class, 'profesionalesInactivos']);
 
         // Generacion de PDF
         Route::post('/v1/exportarPdf', [HistoriaClinicaController::class, 'exportarPdf']);

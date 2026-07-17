@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('kardex_campos', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre')->unique();
+            $table->string('titulo');
+            $table->enum('tipo', ['text', 'boolean', 'select', 'date', 'number', 'textarea']);
+            $table->json('opciones')->nullable();
+            $table->text('descripcion')->nullable();
+            $table->text('valor_defecto')->nullable();
+            $table->boolean('activo')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('kardex_campos');
+    }
+};
