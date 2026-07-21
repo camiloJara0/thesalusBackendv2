@@ -34,7 +34,7 @@ class HistorialCambioSondaController extends Controller
         $codigos = [];
 
         $nuevo = Historial_cambio_sonda::create([
-            'id_kardex' => $request['id_kardex'] ?? null,
+            'id_paciente' => $request['id_paciente'] ?? null,
             'fecha_cambio' => $request['fecha_cambio'] ?? null,
             'tipo_sonda' => $request['tipo_sonda'] ?? null,
             'observacion' => $request['observacion'] ?? null,

@@ -106,7 +106,7 @@ class KardexController extends Controller
             'id_paciente'           => 'required|integer|exists:pacientes,id',
             'registros'             => 'required|array',
             'registros.*.id_campo'  => 'required|integer|exists:kardex_campos,id',
-            'registros.*.valor'     => 'nullable|string',
+            'registros.*.valor'     => 'nullable',
         ]);
 
         $idPaciente = $request->id_paciente;
@@ -146,7 +146,7 @@ class KardexController extends Controller
             'observacion'    => 'nullable|string',
         ]);
 
-        $campoUltimoCambio = KardexCampo::where('nombre', 'ultimoCambio')->first();
+        $campoUltimoCambio = KardexCampo::where('nombre', 'ultimo_cambio')->first();
 
         if ($campoUltimoCambio) {
             KardexRegistro::updateOrInsert(
@@ -155,16 +155,13 @@ class KardexController extends Controller
             );
         }
 
-        $kardexRow = DB::table('kardex')->where('id_paciente', $request->id_paciente)->first();
+        $historial = new Historial_cambio_sonda();
+        $historial->id_paciente = $request->id_paciente;
+        $historial->fecha_cambio = $request->ultimoCambio;
+        $historial->tipo_sonda = $request->tipo_sonda;
+        $historial->observacion = $request->observacion;
+        $historial->save();
 
-        if ($kardexRow) {
-            $historial = new Historial_cambio_sonda();
-            $historial->id_kardex = $kardexRow->id;
-            $historial->fecha_cambio = $request->ultimoCambio;
-            $historial->tipo_sonda = $request->tipo_sonda;
-            $historial->observacion = $request->observacion;
-            $historial->save();
-        }
 
         return response()->json([
             'success' => true,

@@ -49,136 +49,143 @@ class PlanManejoMedicamentoController extends Controller
         $pdfMEDICAMENTO= false;
         $pdfCount      = 0; // contador de PDFs agregados
 
-        if (!empty($data['Plan_manejo_medicamentos'])) {
-            $planes['Plan_manejo_medicamentos'] = [];
-
-            foreach ($data['Plan_manejo_medicamentos'] as $item) {
-                $insumo = Insumo::with('infoMedicamento', 'infoInsumo', 'infoEquipo')
-                    ->find($item['id_insumo']);
-                    
-                if (!$insumo || $insumo->stock < ($item['cantidad'] ?? 0)) {
-                    continue;
-                }
-
-                if ($insumo->categoria === 'Medicamento') {
-                    $nuevo = Plan_manejo_medicamento::create([
-                        $item,
-                        'dosis' => 'N/A',
-                        'id_paciente' => $data['id_paciente'],
-                        'id_medico' => $data['id_medico'],
-                    ]);
-                    $planes['Plan_manejo_medicamentos'][] = $nuevo;
-                    $pdfMEDICAMENTO = true;
-                    $medicamentos[] = $nuevo;
-                }
-
-                $cantidadMovimiento = $item['cantidad'] ?? 0;
-                $movimiento = Movimiento::create([
-                    'cantidadMovimiento' => $cantidadMovimiento,
-                    'fechaMovimiento'    => now(),
-                    'tipoMovimiento'     => $insumo->es_prestable ? 'Prestado' : 'Egreso',
-                    'id_medico'          => $item['id_medico'] ?? null,
-                    'id_insumo'          => $insumo->id,
-                    'id_paciente'        => $item['id_paciente'],
-                ]);
-
-                $insumo->decrement('stock', $cantidadMovimiento);
-
-                if ($insumo->es_prestable) {
-                    $pdfCOMODATO = true;
-                    $equipos[] = array_merge($insumo->toArray(), ['fecha' => now()], $item);
-
-                    Historial_insumoprestado::create([
-                        'id_insumo'    => $insumo->id,
-                        'id_movimiento'=> $movimiento->id,
-                        'fecha_desde'  => $item['fecha_desde'],
-                        'fecha_hasta'  => $item['fecha_hasta'],
-                        'observacion'  => $item['observacion'],
-                        'estado'       => 'Prestado',
-                    ]);
-                }
-            }
-        }
-
-        $paciente = DB::table('pacientes')
-            ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
-            ->join('eps', 'pacientes.id_eps', '=', 'eps.id')
-            ->where('pacientes.id', $data['id_paciente'])
-            ->select('pacientes.*', 'informacion_users.*', 'eps.nombre as Eps')
-            ->first();
-
-        $profesional = DB::table('profesionals')
-            ->join('informacion_users', 'profesionals.id_infoUsuario', '=', 'informacion_users.id')
-            ->join('profesions', 'profesionals.id_profesion', '=', 'profesions.id')
-            ->where('profesionals.id', $data['id_medico'] ?? 0)
-            ->select('profesionals.*', 'informacion_users.*', 'profesions.nombre as profesion')
-            ->first();
-
-        $convenios = DB::table('paciente_has_convenios')
-            ->where('id_paciente', $data['id_paciente'])
-            ->join('convenios', 'paciente_has_convenios.id_convenio', '=', 'convenios.id')
-            ->select('convenios.*')
-            ->first();
-
-        $fileName = 'ActaEntrega_' . $paciente->name . '.pdf';
-        $merger = new PDFMerger;
-
-        if ($pdfMEDICAMENTO) {
-            $pdfActa = Pdf::loadView('pdf.actaEntregaMedicamentos', compact('paciente','profesional','medicamentos','convenios'))->output();
-            $pathActa = storage_path('app/temp_acta.pdf');
-            file_put_contents($pathActa, $pdfActa);
-            $merger->addPDF($pathActa, 'all');
-            $pdfCount++;
-        }
-
-        if ($pdfCOMODATO) {
-            $empresa = DB::table('empresas')->first();
-            $totalPages = 1;
-            $pdfTemp = Pdf::loadView('pdf.comodato', compact('paciente','profesional','equipos','empresa', 'totalPages', 'convenios'));
-            $pdfTemp->render();
-            $totalPages = $pdfTemp->getDomPDF()->getCanvas()->get_page_count();
-
-            $pdfComodato = Pdf::loadView('pdf.comodato', compact('paciente','profesional','equipos','empresa', 'totalPages', 'convenios'))->output();
-            $pathComodato = storage_path('app/temp_comodato.pdf');
-            file_put_contents($pathComodato, $pdfComodato);
-            $merger->addPDF($pathComodato, 'all');
-            $pdfCount++;
-
-            $pdfConstancia = Pdf::loadView('pdf.constanciaPrestacion', compact('paciente','profesional','equipos','convenios'))->output();
-            $pathConstancia = storage_path('app/temp_constancia.pdf');
-            file_put_contents($pathConstancia, $pdfConstancia);
-            $merger->addPDF($pathConstancia, 'all');
-            $pdfCount++;
-        }
-
-        // Validar con el contador
-        if ($pdfCount === 0) {
-            return response()->json([
-                'success' => true,
-                'message' => 'No se generó ningún PDF para este paciente'
-            ], 200);
-        }
+        DB::beginTransaction();
 
         try {
+
+            if (!empty($data['Plan_manejo_medicamentos'])) {
+                $planes['Plan_manejo_medicamentos'] = [];
+
+                foreach ($data['Plan_manejo_medicamentos'] as $item) {
+                    $insumo = Insumo::with('infoMedicamento', 'infoInsumo', 'infoEquipo')
+                        ->find($item['id_insumo']);
+                        
+                    if (!$insumo || $insumo->stock < ($item['cantidad'] ?? 0)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Insumo no encontrado o cantidad superior a stock.',
+                        ], 500);
+                    }
+
+                    if ($insumo->categoria === 'Medicamento') {
+                        $nuevo = Plan_manejo_medicamento::create([
+                            $item,
+                            'dosis' => 'N/A',
+                            'id_paciente' => $data['id_paciente'],
+                            'id_medico' => $data['id_medico'],
+                        ]);
+                        $planes['Plan_manejo_medicamentos'][] = $nuevo;
+                        $pdfMEDICAMENTO = true;
+                        $medicamentos[] = $nuevo;
+                    }
+
+                    $cantidadMovimiento = $item['cantidad'] ?? 0;
+                    $movimiento = Movimiento::create([
+                        'cantidadMovimiento' => $cantidadMovimiento,
+                        'fechaMovimiento'    => now(),
+                        'tipoMovimiento'     => $insumo->es_prestable ? 'Prestado' : 'Egreso',
+                        'id_medico'          => $item['id_medico'] ?? null,
+                        'id_insumo'          => $insumo->id,
+                        'id_paciente'        => $item['id_paciente'],
+                    ]);
+
+                    $insumo->decrement('stock', $cantidadMovimiento);
+
+                    if ($insumo->es_prestable) {
+                        $pdfCOMODATO = true;
+                        $equipos[] = array_merge($insumo->toArray(), ['fecha' => now()], $item);
+
+                        Historial_insumoprestado::create([
+                            'id_insumo'    => $insumo->id,
+                            'id_movimiento'=> $movimiento->id,
+                            'fecha_desde'  => $item['fecha_desde'],
+                            'fecha_hasta'  => $item['fecha_hasta'],
+                            'observacion'  => $item['observacion'],
+                            'estado'       => 'Prestado',
+                        ]);
+                    }
+                }
+            }
+
+            $paciente = DB::table('pacientes')
+                ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
+                ->join('eps', 'pacientes.id_eps', '=', 'eps.id')
+                ->where('pacientes.id', $data['id_paciente'])
+                ->select('pacientes.*', 'informacion_users.*', 'eps.nombre as Eps')
+                ->first();
+
+            $profesional = DB::table('profesionals')
+                ->join('informacion_users', 'profesionals.id_infoUsuario', '=', 'informacion_users.id')
+                ->join('profesions', 'profesionals.id_profesion', '=', 'profesions.id')
+                ->where('profesionals.id', $data['id_medico'] ?? 0)
+                ->select('profesionals.*', 'informacion_users.*', 'profesions.nombre as profesion')
+                ->first();
+
+            $convenios = DB::table('paciente_has_convenios')
+                ->where('id_paciente', $data['id_paciente'])
+                ->join('convenios', 'paciente_has_convenios.id_convenio', '=', 'convenios.id')
+                ->select('convenios.*')
+                ->first();
+
+            $fileName = 'ActaEntrega_' . $paciente->name . '.pdf';
+            $merger = new PDFMerger;
+
+            if ($pdfMEDICAMENTO) {
+                $pdfActa = Pdf::loadView('pdf.actaEntregaMedicamentos', compact('paciente','profesional','medicamentos','convenios'))->output();
+                $pathActa = storage_path('app/temp_acta.pdf');
+                file_put_contents($pathActa, $pdfActa);
+                $merger->addPDF($pathActa, 'all');
+                $pdfCount++;
+            }
+
+            if ($pdfCOMODATO) {
+                $empresa = DB::table('empresas')->first();
+                $totalPages = 1;
+                $pdfTemp = Pdf::loadView('pdf.comodato', compact('paciente','profesional','equipos','empresa', 'totalPages', 'convenios'));
+                $pdfTemp->render();
+                $totalPages = $pdfTemp->getDomPDF()->getCanvas()->get_page_count();
+
+                $pdfComodato = Pdf::loadView('pdf.comodato', compact('paciente','profesional','equipos','empresa', 'totalPages', 'convenios'))->output();
+                $pathComodato = storage_path('app/temp_comodato.pdf');
+                file_put_contents($pathComodato, $pdfComodato);
+                $merger->addPDF($pathComodato, 'all');
+                $pdfCount++;
+
+                $pdfConstancia = Pdf::loadView('pdf.constanciaPrestacion', compact('paciente','profesional','equipos','convenios'))->output();
+                $pathConstancia = storage_path('app/temp_constancia.pdf');
+                file_put_contents($pathConstancia, $pdfConstancia);
+                $merger->addPDF($pathConstancia, 'all');
+                $pdfCount++;
+            }
+
+            // Validar con el contador
+            if ($pdfCount === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No se generó ningún PDF para este paciente'
+                ], 200);
+            }
+
             $finalPath = storage_path('app/' . $fileName);
             $merger->merge('file', $finalPath);
 
+            DB::commit();
             return response()->download($finalPath, $fileName, [
                 'Content-Type'                  => 'application/pdf',
                 'Access-Control-Allow-Origin'   => '*',
                 'Access-Control-Expose-Headers' => 'Content-Disposition'
             ]);
-        } catch (\Exception $e) {
-            // Log del error para depuración
-            \Log::error('Error al generar PDF: ' . $e->getMessage());
+        } catch (\Throwable $e) {
 
-            // Respuesta exitosa aunque el PDF falle
+            DB::rollBack();
+
             return response()->json([
-                'success' => true,
-                'message' => 'Se registró correctamente, pero hubo un error al generar el PDF',
-                'error'   => $e->getMessage()
-            ], 200);
+                'success' => false,
+                'message' => 'Ocurrio un error intentalo de nuevo.',
+                'error' => $e->getMessage()
+            ], 500);
         }
+
     }
 
     /**

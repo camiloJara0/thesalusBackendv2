@@ -10,7 +10,7 @@ class Historial_cambio_sonda extends Model
     use HasFactory;
     protected $table = 'historial_cambio_sonda';
     protected $fillable = [
-        'id_kardex',
+        'id_paciente',
         'fecha_cambio',
         'tipo_sonda',
         'observacion'

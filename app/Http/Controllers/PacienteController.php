@@ -65,6 +65,7 @@ class PacienteController extends Controller
     public function traeKardex()
     {
         $pacientes = DB::table('pacientes')
+            ->where('pacientes.estado', 1)
             ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
             ->join('eps', 'pacientes.id_eps', '=', 'eps.id')
             ->leftJoin('kardex', 'pacientes.id', '=', 'kardex.id_paciente')

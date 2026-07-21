@@ -292,7 +292,7 @@
 
                         <tr>
                             <td><strong>Código</strong></td>
-                            <td style="color: #000;">CP-{{ $equipos[0]['id_movimiento'] }}</td>
+                            <td style="color: #000;">CP-{{ $equipos[0]['id'] }}</td>
                         </tr>
 
                         <tr>
