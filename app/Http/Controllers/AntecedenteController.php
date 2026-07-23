@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Antecedente;
+use App\Http\Requests\StoreAntecedenteRequest;
+use App\Http\Requests\UpdateAntecedenteRequest;
 use Illuminate\Http\Request;
 
 class AntecedenteController extends Controller
@@ -27,7 +29,7 @@ class AntecedenteController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreAntecedenteRequest $request)
     {
         // Crear el nuevo antecedente
         $antecedente = new Antecedente();
@@ -62,7 +64,7 @@ class AntecedenteController extends Controller
      * @param  \App\Models\Antecedente  $antecedente
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Antecedente $antecedente)
+    public function update(UpdateAntecedenteRequest $request, Antecedente $antecedente)
     {
         $antecedente->id_paciente = $request->id_paciente;
         $antecedente->tipo = $request->tipo;
@@ -71,9 +73,10 @@ class AntecedenteController extends Controller
 
         // Retornar respuesta (puedes personalizar según tu flujo)
         return response()->json([
+            'success' => true,
             'message' => 'Antecedente actualizado exitosamente.',
             'data' => $antecedente
-        ], 201);
+        ], 200);
     }
 
     /**

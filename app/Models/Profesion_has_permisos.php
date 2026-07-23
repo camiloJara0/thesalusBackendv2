@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class Profesion_has_permisos extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'id_profesion',
+        'id_seccion',
+    ];
+
     public function profesion(){
         return $this->belongsTo(Profesion::class, 'id_profesion');
     }

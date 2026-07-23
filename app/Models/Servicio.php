@@ -10,6 +10,12 @@ class Servicio extends Model
     use HasFactory;
     protected $table = 'servicio';
 
+    protected $fillable = [
+        'name',
+        'plantilla',
+        'estado',
+    ];
+
     public function analises()
     {
         return $this->hasMany(Analisis::class, 'id_servicio');

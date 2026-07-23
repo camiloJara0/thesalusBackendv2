@@ -7,6 +7,9 @@ use App\Models\InformacionUser;
 use App\Models\Profesion;
 use App\Models\User;
 use App\Models\Cita;
+use App\Models\Empresa;
+use App\Http\Requests\StoreProfesionalRequest;
+use App\Http\Requests\UpdateProfesionalRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -14,6 +17,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\CodigoVerificacionMail;
 use App\Models\CodigoVerificacion;
 use Illuminate\Support\Carbon;
+
+use Illuminate\Support\Facades\DB;
 
 class ProfesionalController extends Controller
 {
@@ -69,125 +74,114 @@ class ProfesionalController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreProfesionalRequest $request)
     {
-        // 1️⃣ Buscar o crear el usuario
         $informacionUser = InformacionUser::where('No_document', $request->No_document)->first();
         $usuario = $informacionUser ? User::where('id_infoUsuario', $informacionUser->id)->first() : null;
         $correo = User::where('correo', $request->correo)->first();
         if($correo){
-            // 4️⃣ Respuesta
             return response()->json([
                 'success' => false,
                 'message' => 'Correo del profesional ya registrado.',
-                'correo' => $correo,
-            ], 500);
+            ], 409);
         }
         if($informacionUser){
-            // 2️⃣ Guardar información adicional en InformacionUser
             return response()->json([
                 'success' => true,
-                'message' => 'Cedula ya registrada.',
-            ], 500);
+                'message' => 'Cédula ya registrada.',
+            ], 409);
         }
 
-        if(!$informacionUser){
-            // 2️⃣ Guardar información adicional en InformacionUser
-            $informacionUser = new InformacionUser();
-            $informacionUser->name = $request->name;
-            $informacionUser->No_document = $request->No_document;
-            $informacionUser->type_doc = $request->type_doc;
-            $informacionUser->celular = $request->celular;
-            $informacionUser->telefono = $request->telefono ?? null;
-            $informacionUser->nacimiento = $request->nacimiento;
-            $informacionUser->direccion = $request->direccion;
-            $informacionUser->municipio = $request->municipio;
-            $informacionUser->departamento = $request->departamento;
-            $informacionUser->barrio = $request->barrio;
-            $informacionUser->zona = $request->zona;
-            $informacionUser->save();
-        }
+        DB::beginTransaction();
 
-        // 3️⃣ Guardar datos del profesional
-        $profesional = new Profesional();
-        $profesional->id_infoUsuario = $informacionUser->id;
-        $profesional->id_profesion = $request->id_profesion;
-        $profesional->zona_laboral = $request->zona_laboral;
-        $profesional->departamento_laboral = $request->departamento_laboral;
-        $profesional->municipio_laboral = $request->municipio_laboral;
+        try {
+            if(!$informacionUser){
+                $informacionUser = new InformacionUser();
+                $informacionUser->name = $request->name;
+                $informacionUser->No_document = $request->No_document;
+                $informacionUser->type_doc = $request->type_doc;
+                $informacionUser->celular = $request->celular;
+                $informacionUser->telefono = $request->telefono ?? null;
+                $informacionUser->nacimiento = $request->nacimiento;
+                $informacionUser->direccion = $request->direccion;
+                $informacionUser->municipio = $request->municipio;
+                $informacionUser->departamento = $request->departamento;
+                $informacionUser->barrio = $request->barrio;
+                $informacionUser->zona = $request->zona;
+                $informacionUser->save();
+            }
 
-        // --- Manejo del sello (imagen) ---
-
-            // Reglas recomendadas de validación
-            $request->validate([
-                'selloFile' => 'nullable|file|mimes:png,jpg,jpeg,webp|max:5120', // max 5MB
-            ]);
+            $profesional = new Profesional();
+            $profesional->id_infoUsuario = $informacionUser->id;
+            $profesional->id_profesion = $request->id_profesion;
+            $profesional->zona_laboral = $request->zona_laboral;
+            $profesional->departamento_laboral = $request->departamento_laboral;
+            $profesional->municipio_laboral = $request->municipio_laboral;
 
             $selloPath = null;
             if ($request->hasFile('selloFile') && $request->file('selloFile')->isValid()) {
                 $file = $request->file('selloFile');
-
-                // Nombre seguro y único
                 $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();
-
-                // Ruta dentro del disco public
                 $folder = 'profesionales/sellos';
-
-                // Opcional: redimensionar/optimizar con Intervention/Image
-                // $img = Image::make($file)->resize(1200, null, function ($constraint) {
-                //     $constraint->aspectRatio();
-                //     $constraint->upsize();
-                // })->encode($file->getClientOriginalExtension(), 80); // calidad 80
-                // Storage::disk('public')->put("$folder/$filename", (string)$img);
-
-                // Si no usamos intervention simplemente guardamos
-                $path = $file->storeAs($folder, $filename, 'public'); // devuelve 'profesionales/sellos/xxx.jpg'
-
+                $path = $file->storeAs($folder, $filename, 'public');
                 $selloPath = $path;
             }
 
-            // Guardar solo la ruta (o null si no hay imagen)
-            $profesional->sello = $selloPath; // guardar 'profesionales/sellos/xxx.jpg'
+            $profesional->sello = $selloPath;
             $profesional->save();
 
-        if(!$usuario){
-            // guardar usuario si no existe
-            $usuario = new User();
-            $usuario->id_empresa = 1;
-            $usuario->id_infoUsuario = $informacionUser->id;;
-            $usuario->correo = $request->correo;
-            $usuario->contraseña = null;
-            $usuario->rol = 'Profesional';
-            $usuario-> save();
+            $correoEnviado = null;
 
-            $codigo = Str::random(6);
+            if(!$usuario){
+                $empresa = Empresa::first();
+                $usuario = new User();
+                $usuario->id_empresa = $empresa->id;
+                $usuario->id_infoUsuario = $informacionUser->id;;
+                $usuario->correo = $request->correo;
+                $usuario->contraseña = null;
+                $usuario->rol = 'Profesional';
+                $usuario-> save();
 
-            CodigoVerificacion::create([
-                'correo' => $usuario->correo,
-                'codigo' => $codigo,
-                'expira_en' => Carbon::now()->addMinutes(240)
-            ]);
+                $codigo = Str::random(6);
 
-            $usuarioCreador = User::where('id_infoUsuario', $request->id_correoCreador)->first();
+                CodigoVerificacion::create([
+                    'correo' => $usuario->correo,
+                    'codigo' => $codigo,
+                    'expira_en' => Carbon::now()->addMinutes(240)
+                ]);
 
-            Mail::to($usuario->correo)->send(new CodigoVerificacionMail($usuario->correo, $codigo));
-            
-            if($usuarioCreador->correo === 'admin@demo.com') {
-                Mail::to('cata61779@gmail.com')->send(new CodigoVerificacionMail($usuario->correo, $codigo));
-                Mail::to('homecaresantaisabel@gmail.com')->send(new CodigoVerificacionMail($usuario->correo, $codigo));
-            } else {
-                Mail::to($usuarioCreador->correo)->send(new CodigoVerificacionMail($usuario->correo, $codigo));
+                $usuarioCreador = User::where('id_infoUsuario', $request->id_correoCreador)->first();
+                $correoEnviado = ['correo' => $usuario->correo, 'codigo' => $codigo, 'correoCreador' => $usuarioCreador->correo ?? null];
             }
 
+            DB::commit();
+
+            if ($correoEnviado) {
+                try {
+                    Mail::to($correoEnviado['correo'])->send(new CodigoVerificacionMail($correoEnviado['correo'], $correoEnviado['codigo']));
+                    if(($correoEnviado['correoCreador'] ?? null) === 'admin@demo.com') {
+                        Mail::to('cata61779@gmail.com')->send(new CodigoVerificacionMail($correoEnviado['correo'], $correoEnviado['codigo']));
+                        Mail::to('homecaresantaisabel@gmail.com')->send(new CodigoVerificacionMail($correoEnviado['correo'], $correoEnviado['codigo']));
+                    } else if ($correoEnviado['correoCreador']) {
+                        Mail::to($correoEnviado['correoCreador'])->send(new CodigoVerificacionMail($correoEnviado['correo'], $correoEnviado['codigo']));
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Error enviando correo de verificación', ['exception' => $e]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profesional registrado exitosamente.',
+                'informacion' => $informacionUser,
+                'profesional' => $profesional
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al registrar Profesional', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al registrar Profesional'], 500);
         }
-        
-        // 4️⃣ Respuesta
-        return response()->json([
-            'success' => true,
-            'message' => 'Profesional registrado exitosamente.',
-            'informacion' => $informacionUser,
-            'profesional' => $profesional
-        ], 201);
     }
 
     /**
@@ -208,82 +202,92 @@ class ProfesionalController extends Controller
      * @param  \App\Models\Profesional  $profesional
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Profesional $profesional)
+    public function update(UpdateProfesionalRequest $request, Profesional $profesional)
     {
-        // Validar datos básicos y archivo
-        $request->validate([
-            'selloFile' => 'nullable|file|mimes:png,jpg,jpeg,webp|max:5120',
-        ]);
-
         $informacionUser = InformacionUser::where('id', $request->id_infoUsuario)->first();
-
         $usuario = User::where('id_infoUsuario', $informacionUser->id)->first();
+
         if($usuario->correo != $request->correo){
             $correo = User::where('correo', $request->correo)->first();
             if($correo){
-                // 4️⃣ Respuesta
                 return response()->json([
                     'success' => false,
                     'message' => 'Correo del profesional ya registrado.',
-                    'correo' => $correo,
-                ], 201);
+                ], 409);
+            }
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $correoEnviado = null;
+
+            if($usuario->correo != $request->correo){
+                $usuario->correo = $request->correo;
+                $usuario->save();
+
+                $codigo = Str::random(6);
+
+                CodigoVerificacion::create([
+                    'correo' => $usuario->correo,
+                    'codigo' => $codigo,
+                    'expira_en' => Carbon::now()->addMinutes(240)
+                ]);
+
+                $correoEnviado = ['correo' => $usuario->correo, 'codigo' => $codigo];
             }
 
-            $usuario->correo = $request->correo;
-            $usuario->save();
+            if ($informacionUser) {
+                    $informacionUser->name = $request->name;
+                    $informacionUser->No_document = $request->No_document;
+                    $informacionUser->type_doc = $request->type_doc;
+                    $informacionUser->celular = $request->celular;
+                    $informacionUser->telefono = $request->telefono ?? null;
+                    $informacionUser->nacimiento = $request->nacimiento;
+                    $informacionUser->direccion = $request->direccion;
+                    $informacionUser->municipio = $request->municipio;
+                    $informacionUser->departamento = $request->departamento;
+                    $informacionUser->barrio = $request->barrio;
+                    $informacionUser->zona = $request->zona;
+                    $informacionUser->save();
+            }
 
-            $codigo = Str::random(6);
+                $profesional->id_profesion = $request->id_profesion;
+                $profesional->zona_laboral = $request->zona_laboral;
+                $profesional->departamento_laboral = $request->departamento_laboral;
+                $profesional->municipio_laboral = $request->municipio_laboral;
+                $profesional->estado = $request->estado;
 
-            CodigoVerificacion::create([
-                'correo' => $usuario->correo,
-                'codigo' => $codigo,
-                'expira_en' => Carbon::now()->addMinutes(240)
-            ]);
+            if ($request->hasFile('selloFile') && $request->file('selloFile')->isValid()) {
+                $file     = $request->file('selloFile');
+                $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();
+                $path     = $file->storeAs('profesionales/sellos', $filename, 'public');
+                $profesional->sello = $path;
+            }
+                $profesional->save();
 
-            Mail::to($usuario->correo)->send(new CodigoVerificacionMail($usuario->correo, $codigo));
+            DB::commit();
+
+            if ($correoEnviado) {
+                try {
+                    Mail::to($correoEnviado['correo'])->send(new CodigoVerificacionMail($correoEnviado['correo'], $correoEnviado['codigo']));
+                } catch (\Exception $e) {
+                    \Log::error('Error enviando correo de verificación', ['exception' => $e]);
+                }
+            }
+
+            return response()->json([
+                'success'     => true,
+                'message'     => 'Datos del profesional actualizados exitosamente.',
+                'informacion' => $informacionUser,
+                'profesional' => $profesional,
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al actualizar Profesional', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al actualizar Profesional'], 500);
         }
-
-        // 1️⃣ Actualizar información del usuario
-        if ($informacionUser) {
-                $informacionUser->name = $request->name;
-                $informacionUser->No_document = $request->No_document;
-                $informacionUser->type_doc = $request->type_doc;
-                $informacionUser->celular = $request->celular;
-                $informacionUser->telefono = $request->telefono ?? null;
-                $informacionUser->nacimiento = $request->nacimiento;
-                $informacionUser->direccion = $request->direccion;
-                $informacionUser->municipio = $request->municipio;
-                $informacionUser->departamento = $request->departamento;
-                $informacionUser->barrio = $request->barrio;
-                $informacionUser->zona = $request->zona;
-                $informacionUser->save();
-        }
-
-        // 2️⃣ Actualizar datos del profesional
-            $profesional->id_profesion = $request->id_profesion;
-            $profesional->zona_laboral = $request->zona_laboral;
-            $profesional->departamento_laboral = $request->departamento_laboral;
-            $profesional->municipio_laboral = $request->municipio_laboral;
-            $profesional->estado = $request->estado;
-
-        // Manejo del sello (imagen)
-        if ($request->hasFile('selloFile') && $request->file('selloFile')->isValid()) {
-            $file     = $request->file('selloFile');
-            $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();
-            $path     = $file->storeAs('profesionales/sellos', $filename, 'public');
-            $profesional->sello = $path;
-        }
-            $profesional->save();
-
-        // 4️⃣ Respuesta
-        return response()->json([
-            'success'     => true,
-            'message'     => 'Datos del profesional actualizados exitosamente.',
-            'informacion' => $informacionUser,
-            'profesional' => $profesional,
-        ], 200);
-
-
     }
 
     /**
@@ -294,30 +298,37 @@ class ProfesionalController extends Controller
      */
     public function destroy(Request $request, Profesional $profesional)
     {
-        $profesional = Profesional::find($request->id);
+        DB::beginTransaction();
 
-        if($profesional){
+        try {
             $user = User::where('id_infoUsuario', $profesional->id_infoUsuario)->first();
-            $user->estado = 0;
-            $user->save();
-            
+            if ($user) {
+                $user->estado = 0;
+                $user->save();
+            }
+
             $profesional->estado = 0;
             $profesional->save();
 
-            // Cancelar citas inactivas del paciente
             Cita::where('id_medico', $profesional->id)
                 ->where('estado', 'Inactiva')
                 ->update([
                     'estado' => 'cancelada',
                     'motivo_cancelacion' => 'Profesional eliminado',
                 ]);
-        }
 
-        // Respuesta
-        return response()->json([
-            'success' => true,
-            'message' => 'Profesional deshabilitado exitosamente.',
-            'data' => $profesional
-        ], 200);
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profesional deshabilitado exitosamente.',
+                'data' => $profesional
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al eliminar Profesional', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al eliminar Profesional'], 500);
+        }
     }
 }

@@ -3,6 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Profesion;
+use App\Http\Requests\StorePermisosRequest;
+use App\Http\Requests\SolicitarPermisoRequest;
+use App\Http\Requests\AprobarPermisoRequest;
+use App\Http\Requests\VerificarPermisosRequest;
+use App\Http\Requests\ConsumirPermisoRequest;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +42,7 @@ class ProfesionalHasPermisosController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StorePermisosRequest $request)
     {
         DB::beginTransaction();
 
@@ -90,10 +95,10 @@ class ProfesionalHasPermisosController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error al crear permisos al profesional (store)', ['exception' => $e]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear la permisos al profesional.',
-                'error' => $e->getMessage()
+                'message' => 'Error al crear los permisos al profesional.',
             ], 500);
         }
     }
@@ -121,34 +126,29 @@ class ProfesionalHasPermisosController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1️⃣ Crear nuevo permiso
             $profesional = Profesional::where('id', $request->id_profesional)->first();
 
-            // 2️⃣ Asociar permisos si vienen en el request
-            // 2️⃣ Obtener IDs de permisos desde nombres
             $permisosIds = [];
             if (!empty($request->permisos) && is_array($request->permisos)) {
                 $permisosIds = Secciones::whereIn('nombre', $request->permisos)->pluck('id')->toArray();
             }
 
-            // 3️⃣ Sincronizar permisos (agrega nuevos y elimina los que no están)
             $profesional->permisos()->sync($permisosIds);
 
             DB::commit();
 
-            // 3️⃣ Retornar respuesta
             return response()->json([
                 'success' => true,
-                'message' => 'Permisos para profesional creadas exitosamente.',
+                'message' => 'Permisos para profesional actualizados exitosamente.',
                 'data' => $profesion
-            ], 201);
+            ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error al actualizar permisos del profesional', ['exception' => $e]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear la permisos al profesional.',
-                'error' => $e->getMessage()
+                'message' => 'Error al actualizar los permisos del profesional.',
             ], 500);
         }
 
@@ -164,13 +164,14 @@ class ProfesionalHasPermisosController extends Controller
     {
         $profesion->estado = 0;
         $profesion->save();
-        response()->json([
+        return response()->json([
+            'success' => true,
             'message' => 'Profesión desactivada exitosamente.'
-        ]);
+        ], 200);
 
     }
 
-    public function solicitarPermiso(Request $request)
+    public function solicitarPermiso(SolicitarPermisoRequest $request)
     {
         DB::beginTransaction();
 
@@ -213,15 +214,16 @@ class ProfesionalHasPermisosController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
+            \Log::error('Error al solicitar permiso', ['exception' => $e]);
 
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Error al procesar la solicitud de permiso',
             ]);
         }
     }
 
-    public function aprobarPermiso(Request $request)
+    public function aprobarPermiso(AprobarPermisoRequest $request)
     {
         DB::beginTransaction();
 
@@ -272,15 +274,16 @@ class ProfesionalHasPermisosController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
+            \Log::error('Error al aprobar permiso', ['exception' => $e]);
 
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Error al procesar la aprobación del permiso',
             ]);
         }
     }
 
-    public function verificarPermisos(Request $request)
+    public function verificarPermisos(VerificarPermisosRequest $request)
     {
         $permisos = DB::table('profesional_has_permisos')
             ->join('secciones', 'profesional_has_permisos.id_seccion', '=', 'secciones.id')
@@ -299,7 +302,7 @@ class ProfesionalHasPermisosController extends Controller
         ]);
     }
 
-    public function consumirPermiso(Request $request)
+    public function consumirPermiso(ConsumirPermisoRequest $request)
     {
         DB::table('profesional_has_permisos')
             ->where('id', $request->permiso_id)

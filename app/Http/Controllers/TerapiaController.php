@@ -9,6 +9,8 @@ use App\Models\Diagnostico;
 use App\Models\Diagnostico_relacionado;
 use App\Models\Analisis;
 use App\Models\Historia_Clinica;
+use App\Http\Requests\StoreTerapiaRequest;
+use App\Http\Requests\UpdateTerapiaRequest;
 
 use Illuminate\Http\Request;
 
@@ -35,7 +37,7 @@ class TerapiaController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreTerapiaRequest $request)
     {
         DB::beginTransaction();
 
@@ -102,7 +104,8 @@ class TerapiaController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al guardar Terapia', 'message' => $e->getMessage()], 500);
+            \Log::error('Error al guardar Terapia', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al guardar Terapia'], 500);
         }
 
     }
@@ -125,7 +128,7 @@ class TerapiaController extends Controller
      * @param  \App\Models\Terapia  $terapia
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Terapia $terapia)
+    public function update(UpdateTerapiaRequest $request, Terapia $terapia)
     {
         $terapia = Terapia::find($request->input('id'));
 
@@ -159,17 +162,17 @@ class TerapiaController extends Controller
      */
     public function destroy(Terapia $terapia)
     {
+        if(!$terapia){
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró terapia.'
+            ], 404);
+        }
+
+        DB::beginTransaction();
+
         try {
-
-            if(!$terapia){
-                return response()->json([
-                    'success' => true,
-                    'message' => 'No se encontro nota.'
-                ], 500);
-            }
-
             $analisis = Analisis::where('id', $terapia->id_analisis)->first();
-            // Eliminar analisis y todos los registros relacionados
             $analisis->diagnosticos()->delete();
             $analisis->enfermedad()->delete();
             $analisis->examenFisico()->delete();
@@ -178,13 +181,17 @@ class TerapiaController extends Controller
             $terapia->delete();
             $analisis->delete();
 
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Reporte de terapia eliminada exitosamente.'
             ]);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al eliminar terapia', 'message' => $e->getMessage()], 500);
+            DB::rollBack();
+            \Log::error('Error al eliminar Terapia', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al eliminar Terapia'], 500);
         }
     }
 

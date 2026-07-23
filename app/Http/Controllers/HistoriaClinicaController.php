@@ -295,7 +295,7 @@ class HistoriaClinicaController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $historia
+            'data' => $diagnosticos
         ]); 
     }
 
@@ -440,7 +440,8 @@ class HistoriaClinicaController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al guardar historia clínica', 'message' => $e->getMessage()], 500);
+            \Log::error('Error al guardar historia clínica (store)', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al guardar historia clínica'], 500);
         }
 
     }
@@ -528,7 +529,8 @@ class HistoriaClinicaController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al guardar historia clínica', 'message' => $e->getMessage()], 500);
+            \Log::error('Error al guardar historia clínica (storeNutricion)', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al guardar historia clínica'], 500);
         }
 
     }
@@ -604,7 +606,8 @@ class HistoriaClinicaController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al guardar historia clínica', 'message' => $e->getMessage()], 500);
+            \Log::error('Error al guardar historia clínica (storeTrabajoSocial)', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al guardar historia clínica'], 500);
         }
 
     }
@@ -679,7 +682,8 @@ class HistoriaClinicaController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al guardar historia clínica', 'message' => $e->getMessage()], 500);
+            \Log::error('Error al guardar historia clínica (storeNota)', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al guardar historia clínica'], 500);
         }
 
     }
@@ -832,9 +836,10 @@ class HistoriaClinicaController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error al guardar/actualizar historia clínica (update)', ['exception' => $e]);
             return response()->json([
-                'error' => 'Error al guardar/actualizar historia clínica',
-                'message' => $e->getMessage()
+                'success' => false,
+                'message' => 'Error al guardar/actualizar historia clínica',
             ], 500);
         }
     }

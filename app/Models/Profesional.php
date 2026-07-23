@@ -8,6 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 class Profesional extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'id_profesion',
+        'id_infoUsuario',
+        'zona_laboral',
+        'departamento_laboral',
+        'municipio_laboral',
+        'estado',
+        'sello',
+    ];
+
     public function infoUsuario(){
         return $this->belongsTo(InformacionUser::class, 'id_infoUsuario');
     }

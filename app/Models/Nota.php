@@ -8,6 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 class Nota extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'direccion',
+        'fecha_nota',
+        'hora_nota',
+        'tipoAnalisis',
+        'id_analisis',
+    ];
+
     public function procedimiento(){
         return $this->belongsTo(Plan_manejo_procedimiento::class, 'id_procedimiento');
     }

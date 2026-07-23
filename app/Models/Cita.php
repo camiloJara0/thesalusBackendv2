@@ -8,6 +8,22 @@ use Illuminate\Database\Eloquent\Model;
 class Cita extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'id_paciente',
+        'id_medico',
+        'motivo',
+        'fecha',
+        'hora',
+        'estado',
+        'motivo_cancelacion',
+        'id_procedimiento',
+        'fechaHasta',
+        'motivo_edicion',
+        'id_analisis',
+        'id_servicio',
+    ];
+
     public function paciente()
     {
         return $this->belongsTo(Paciente::class, 'id_paciente');

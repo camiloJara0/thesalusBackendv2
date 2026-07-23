@@ -7,6 +7,7 @@ use App\Models\Historial_insumoprestado;
 use Illuminate\Support\Facades\DB;
 use App\Models\Insumo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class MovimientoController extends Controller
 {
@@ -53,36 +54,41 @@ class MovimientoController extends Controller
             'id_insumo' => 'required|exists:insumos,id',
         ]);
 
-        if($request->id_movimiento){
+        DB::beginTransaction();
 
+        try {
+            $movimiento = Movimiento::create($validated);
+
+            $insumo = Insumo::findOrFail($validated['id_insumo']);
+            if ($validated['tipoMovimiento'] === 'Ingreso') {
+                $insumo->stock += $validated['cantidadMovimiento'];
+            } else if($validated['tipoMovimiento'] === 'Egreso') {
+                $insumo->stock -= $validated['cantidadMovimiento'];
+            } else if($validated['tipoMovimiento'] === 'Devuelto') {
+                $historialPrestado = Historial_insumoprestado::where('id_movimiento', $request->id_movimiento)->first();
+                $historialPrestado->estado = 'Devuelto';
+                $historialPrestado->save();
+
+                $movimiento->id_paciente = $historialPrestado->id_paciente;
+                $movimiento->save();
+
+                $insumo->stock += $validated['cantidadMovimiento'];
+            }
+            $insumo->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Movimiento registrado correctamente',
+                'data' => $movimiento
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al registrar Movimiento', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al registrar Movimiento'], 500);
         }
-
-        $movimiento = Movimiento::create($validated);
-
-        // Actualizar stock del insumo
-        $insumo = Insumo::findOrFail($validated['id_insumo']);
-        if ($validated['tipoMovimiento'] === 'Ingreso') {
-            $insumo->stock += $validated['cantidadMovimiento'];
-        } else if($validated['tipoMovimiento'] === 'Egreso') {
-            $insumo->stock -= $validated['cantidadMovimiento'];
-        } else if($validated['tipoMovimiento'] === 'Devuelto') {
-            $historialPrestado = Historial_insumoprestado::where('id_movimiento', $request->id_movimiento)->first();
-            $historialPrestado->estado = 'Devuelto';
-            $historialPrestado->save();
-
-            $movimiento->id_paciente = $historialPrestado->id_paciente;
-            $movimiento->save();
-
-            $insumo->stock += $validated['cantidadMovimiento'];
-        }
-        $insumo->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Movimiento registrado correctamente',
-            'data' => $movimiento
-        ], 201);
-
     }
 
     /**
@@ -124,56 +130,64 @@ class MovimientoController extends Controller
             'id_insumo' => 'required|exists:insumos,id',
         ]);
 
-        $insumo = Insumo::findOrFail($validated['id_insumo']);
+        DB::beginTransaction();
 
-        // Revertir el movimiento anterior
-        switch ($movimiento->tipoMovimiento) {
-            case 'Ingreso':
-                $insumo->stock -= $movimiento->cantidadMovimiento;
-                break;
-            case 'Egreso':
-                $insumo->stock += $movimiento->cantidadMovimiento;
-                break;
-            case 'Devuelto':
-                $historialPrestado = Historial_insumoprestado::where('id_movimiento', $movimiento->id)->first();
-                if ($historialPrestado) {
-                    $historialPrestado->estado = 'Prestado';
-                    $historialPrestado->save();
-                }
-                $insumo->stock -= $movimiento->cantidadMovimiento;
-                break;
+        try {
+            $insumo = Insumo::findOrFail($validated['id_insumo']);
+
+            switch ($movimiento->tipoMovimiento) {
+                case 'Ingreso':
+                    $insumo->stock -= $movimiento->cantidadMovimiento;
+                    break;
+                case 'Egreso':
+                    $insumo->stock += $movimiento->cantidadMovimiento;
+                    break;
+                case 'Devuelto':
+                    $historialPrestado = Historial_insumoprestado::where('id_movimiento', $movimiento->id)->first();
+                    if ($historialPrestado) {
+                        $historialPrestado->estado = 'Prestado';
+                        $historialPrestado->save();
+                    }
+                    $insumo->stock -= $movimiento->cantidadMovimiento;
+                    break;
+            }
+
+            $insumo->save();
+
+            $movimiento->update($validated);
+
+            switch ($validated['tipoMovimiento']) {
+                case 'Ingreso':
+                    $insumo->stock += $validated['cantidadMovimiento'];
+                    break;
+                case 'Egreso':
+                    $insumo->stock -= $validated['cantidadMovimiento'];
+                    break;
+                case 'Devuelto':
+                    $historialPrestado = Historial_insumoprestado::where('id_movimiento', $movimiento->id)->first();
+                    if ($historialPrestado) {
+                        $historialPrestado->estado = 'Devuelto';
+                        $historialPrestado->save();
+                    }
+                    $insumo->stock += $validated['cantidadMovimiento'];
+                    break;
+            }
+
+            $insumo->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Movimiento actualizado correctamente',
+                'data' => $movimiento
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al actualizar Movimiento', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al actualizar Movimiento'], 500);
         }
-
-        $insumo->save();
-
-        // Actualizar el movimiento con los nuevos datos
-        $movimiento->update($validated);
-
-        // Aplicar el nuevo movimiento
-        switch ($validated['tipoMovimiento']) {
-            case 'Ingreso':
-                $insumo->stock += $validated['cantidadMovimiento'];
-                break;
-            case 'Egreso':
-                $insumo->stock -= $validated['cantidadMovimiento'];
-                break;
-            case 'Devuelto':
-                $historialPrestado = Historial_insumoprestado::where('id_movimiento', $movimiento->id)->first();
-                if ($historialPrestado) {
-                    $historialPrestado->estado = 'Devuelto';
-                    $historialPrestado->save();
-                }
-                $insumo->stock += $validated['cantidadMovimiento'];
-                break;
-        }
-
-        $insumo->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Movimiento actualizado correctamente',
-            'data' => $movimiento
-        ], 200);
     }
 
     /**
@@ -184,42 +198,52 @@ class MovimientoController extends Controller
      */
     public function destroy(Movimiento $movimiento)
     {
-        $insumo = Insumo::where('id', $movimiento->id_insumo)->first();
+        DB::beginTransaction();
 
-        // Revertir el movimiento antes de eliminar
-        switch ($movimiento->tipoMovimiento) {
-            case 'Ingreso':
-                $insumo->stock -= $movimiento->cantidadMovimiento;
-                break;
-            case 'Egreso':
-                $insumo->stock += $movimiento->cantidadMovimiento;
-                break;
-            case 'Devuelto':
-                $historialPrestado = Historial_insumoprestado::where('id_movimiento', $movimiento->id)->first();
-                if ($historialPrestado) {
-                    $historialPrestado->estado = 'Prestado';
-                    $historialPrestado->save();
-                }
-                $insumo->stock -= $movimiento->cantidadMovimiento;
-                break;
-            case 'Prestado':
-                $historialPrestado = Historial_insumoprestado::where('id_movimiento', $movimiento->id)->first();
-                if ($historialPrestado) {
-                    $historialPrestado->estado = 'Devuelto';
-                    $historialPrestado->save();
-                }
-                $insumo->stock += $movimiento->cantidadMovimiento;
-                break;
+        try {
+            $insumo = Insumo::where('id', $movimiento->id_insumo)->first();
+
+            switch ($movimiento->tipoMovimiento) {
+                case 'Ingreso':
+                    $insumo->stock -= $movimiento->cantidadMovimiento;
+                    break;
+                case 'Egreso':
+                    $insumo->stock += $movimiento->cantidadMovimiento;
+                    break;
+                case 'Devuelto':
+                    $historialPrestado = Historial_insumoprestado::where('id_movimiento', $movimiento->id)->first();
+                    if ($historialPrestado) {
+                        $historialPrestado->estado = 'Prestado';
+                        $historialPrestado->save();
+                    }
+                    $insumo->stock -= $movimiento->cantidadMovimiento;
+                    break;
+                case 'Prestado':
+                    $historialPrestado = Historial_insumoprestado::where('id_movimiento', $movimiento->id)->first();
+                    if ($historialPrestado) {
+                        $historialPrestado->estado = 'Devuelto';
+                        $historialPrestado->save();
+                    }
+                    $insumo->stock += $movimiento->cantidadMovimiento;
+                    break;
+            }
+
+            $insumo->save();
+
+            $movimiento->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Movimiento eliminado correctamente'
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al eliminar Movimiento', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al eliminar Movimiento'], 500);
         }
-
-        $insumo->save();
-
-        $movimiento->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Movimiento eliminado correctamente'
-        ], 200);
     }
 
     public function insumosPrestados(Request $request)

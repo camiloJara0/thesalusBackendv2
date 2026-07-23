@@ -10,6 +10,20 @@ use Illuminate\Database\Eloquent\Model;
 class User extends Model
 {
     use HasFactory, HasApiTokens;
+
+    protected $fillable = [
+        'id_empresa',
+        'id_infoUsuario',
+        'correo',
+        'contraseña',
+        'rol',
+        'estado',
+    ];
+
+    protected $hidden = [
+        'contraseña',
+    ];
+
     public function empresa(){
         return $this->belongsTo(Empresa::class, 'id_empresa');
     }

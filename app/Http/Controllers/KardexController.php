@@ -9,6 +9,7 @@ use App\Models\KardexRegistro;
 use App\Models\Historial_cambio_sonda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class KardexController extends Controller
 {
@@ -146,27 +147,37 @@ class KardexController extends Controller
             'observacion'    => 'nullable|string',
         ]);
 
-        $campoUltimoCambio = KardexCampo::where('nombre', 'ultimo_cambio')->first();
+        DB::beginTransaction();
 
-        if ($campoUltimoCambio) {
-            KardexRegistro::updateOrInsert(
-                ['id_paciente' => $request->id_paciente, 'id_campo' => $campoUltimoCambio->id],
-                ['valor' => $request->ultimoCambio, 'updated_at' => now()]
-            );
+        try {
+            $campoUltimoCambio = KardexCampo::where('nombre', 'ultimo_cambio')->first();
+
+            if ($campoUltimoCambio) {
+                KardexRegistro::updateOrInsert(
+                    ['id_paciente' => $request->id_paciente, 'id_campo' => $campoUltimoCambio->id],
+                    ['valor' => $request->ultimoCambio, 'updated_at' => now()]
+                );
+            }
+
+            $historial = new Historial_cambio_sonda();
+            $historial->id_paciente = $request->id_paciente;
+            $historial->fecha_cambio = $request->ultimoCambio;
+            $historial->tipo_sonda = $request->tipo_sonda;
+            $historial->observacion = $request->observacion;
+            $historial->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Historial de cambio de sonda registrado.',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al registrar historial de cambio de sonda', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al registrar historial de cambio de sonda'], 500);
         }
-
-        $historial = new Historial_cambio_sonda();
-        $historial->id_paciente = $request->id_paciente;
-        $historial->fecha_cambio = $request->ultimoCambio;
-        $historial->tipo_sonda = $request->tipo_sonda;
-        $historial->observacion = $request->observacion;
-        $historial->save();
-
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Historial de cambio de sonda registrado.',
-        ]);
     }
 
     public function getCampos()

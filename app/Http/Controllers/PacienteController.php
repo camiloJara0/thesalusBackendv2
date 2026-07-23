@@ -9,6 +9,8 @@ use App\Models\Plan_manejo_procedimiento;
 use App\Models\Paciente_has_convenio;
 use App\Models\Antecedente;
 use App\Models\Cita;
+use App\Http\Requests\StorePacienteRequest;
+use App\Http\Requests\UpdatePacienteRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -30,7 +32,7 @@ class PacienteController extends Controller
         return response()->json([
             'success' => true,
             'data' => $paciente
-        ], 201);
+        ], 200);
     }
 
     public function pacientesInactivos()
@@ -42,7 +44,7 @@ class PacienteController extends Controller
         return response()->json([
             'success' => true,
             'data' => $paciente
-        ], 201);
+        ], 200);
     }
 
     public function traePacientes(Request $request)
@@ -243,7 +245,7 @@ class PacienteController extends Controller
         return response()->json([
             'success' => true,
             'data' => $kardex,
-        ], 201);
+        ], 200);
 
     }
 
@@ -253,92 +255,94 @@ class PacienteController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StorePacienteRequest $request)
     {
         $data = $request->all();
 
-        // 1️⃣ Buscar o crear el usuario
         $informacionUser = InformacionUser::where('No_document', $request->info_usuario['No_document'])->first();
 
         if($informacionUser){
-            // 2️⃣ Guardar información adicional en InformacionUser
             return response()->json([
                 'success' => true,
-                'message' => 'Cedula ya registrada.',
-            ], 500);
+                'message' => 'Cédula ya registrada.',
+            ], 409);
         }
 
-        $informacionUser = InformacionUser::create([
-            'name' => $request->info_usuario['name'],
-            'No_document' => $request->info_usuario['No_document'],
-            'type_doc' => $request->info_usuario['type_doc'],
-            'celular' => $request->info_usuario['celular'],
-            'telefono' => $request->info_usuario['telefono'],
-            'nacimiento' => $request->info_usuario['nacimiento'],
-            'direccion' => $request->info_usuario['direccion'],
-            'municipio' => $request->info_usuario['municipio'],
-            'departamento' => $request->info_usuario['departamento'],
-            'barrio' => $request->info_usuario['barrio'],
-            'zona' => $request->info_usuario['zona'],
-        ]);
+        DB::beginTransaction();
 
-        // 3️⃣ Guardar datos del paciente
-        $paciente = new Paciente();
-        $paciente->id_infoUsuario = $informacionUser->id;
-        $paciente->id_eps = $request->id_eps;
-        $paciente->genero = $request->genero;
-        $paciente->sexo = $request->sexo;
-        $paciente->regimen = $request->regimen;
-        $paciente->vulnerabilidad = $request->vulnerabilidad;
-        $paciente->save();
-
-        
-        $idsEnviados = collect($data['plan_manejo_procedimientos'] ?? [])->pluck('id')->filter()->toArray();
-        Plan_manejo_procedimiento::where('id_paciente', $paciente->id)
-            ->whereNotIn('id', $idsEnviados)
-            ->delete();
-        foreach ($data['plan_manejo_procedimientos'] ?? [] as $item) {
-            
-            Plan_manejo_procedimiento::updateOrCreate(
-                ['id' => $item['id'] ?? null], // si existe → busca
-                [
-                    ...$item,
-                    'id_paciente' => $paciente->id
-                ]
-            );
-        }
-
-        $idsAntecedentes = collect($data['antecedente'] ?? [])->pluck('id')->filter()->toArray();
-        Antecedente::where('id_paciente', $paciente->id)
-            ->whereNotIn('id', $idsAntecedentes)
-            ->delete();
-        foreach ($data['antecedente'] ?? [] as $item) {
-            Antecedente::updateOrCreate(
-                ['id' => $item['id'] ?? null],
-                [
-                    ...$item,
-                    'id_paciente' => $paciente->id
-                ]
-            );
-        }
-
-        if (!empty($request->convenio_id)) {
-
-            DB::table('paciente_has_convenios')->insert([
-                'id_paciente' => $paciente->id,
-                'id_convenio' => $request->convenio_id
+        try {
+            $informacionUser = InformacionUser::create([
+                'name' => $request->info_usuario['name'],
+                'No_document' => $request->info_usuario['No_document'],
+                'type_doc' => $request->info_usuario['type_doc'],
+                'celular' => $request->info_usuario['celular'],
+                'telefono' => $request->info_usuario['telefono'],
+                'nacimiento' => $request->info_usuario['nacimiento'],
+                'direccion' => $request->info_usuario['direccion'],
+                'municipio' => $request->info_usuario['municipio'],
+                'departamento' => $request->info_usuario['departamento'],
+                'barrio' => $request->info_usuario['barrio'],
+                'zona' => $request->info_usuario['zona'],
             ]);
 
+            $paciente = new Paciente();
+            $paciente->id_infoUsuario = $informacionUser->id;
+            $paciente->id_eps = $request->id_eps;
+            $paciente->genero = $request->genero;
+            $paciente->sexo = $request->sexo;
+            $paciente->regimen = $request->regimen;
+            $paciente->vulnerabilidad = $request->vulnerabilidad;
+            $paciente->save();
+
+            $idsEnviados = collect($data['plan_manejo_procedimientos'] ?? [])->pluck('id')->filter()->toArray();
+            Plan_manejo_procedimiento::where('id_paciente', $paciente->id)
+                ->whereNotIn('id', $idsEnviados)
+                ->delete();
+            foreach ($data['plan_manejo_procedimientos'] ?? [] as $item) {
+                Plan_manejo_procedimiento::updateOrCreate(
+                    ['id' => $item['id'] ?? null],
+                    [
+                        ...$item,
+                        'id_paciente' => $paciente->id
+                    ]
+                );
+            }
+
+            $idsAntecedentes = collect($data['antecedente'] ?? [])->pluck('id')->filter()->toArray();
+            Antecedente::where('id_paciente', $paciente->id)
+                ->whereNotIn('id', $idsAntecedentes)
+                ->delete();
+            foreach ($data['antecedente'] ?? [] as $item) {
+                Antecedente::updateOrCreate(
+                    ['id' => $item['id'] ?? null],
+                    [
+                        ...$item,
+                        'id_paciente' => $paciente->id
+                    ]
+                );
+            }
+
+            if (!empty($request->convenio_id)) {
+                DB::table('paciente_has_convenios')->insert([
+                    'id_paciente' => $paciente->id,
+                    'id_convenio' => $request->convenio_id
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Paciente registrado exitosamente.',
+                'informacion' => $informacionUser,
+                'paciente' => $paciente
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al registrar Paciente', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al registrar Paciente'], 500);
         }
-
-        // 4️⃣ Respuesta
-        return response()->json([
-            'success' => true,
-            'message' => 'Paciente registrado exitosamente.',
-            'informacion' => $informacionUser,
-            'paciente' => $paciente
-        ], 201);
-
     }
 
     /**
@@ -359,93 +363,98 @@ class PacienteController extends Controller
      * @param  \App\Models\Paciente  $paciente
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Paciente $paciente)
+    public function update(UpdatePacienteRequest $request, Paciente $paciente)
     {
         $data = $request->all();
-        
-        // Actualizar información del usuario
+
         $informacionUser = InformacionUser::where('No_document', $request->info_usuario['No_document'])->first();
 
-        $informacionUser->update([
-            'name' => $request->info_usuario['name'],
-            'No_document' => $request->info_usuario['No_document'],
-            'type_doc' => $request->info_usuario['type_doc'],
-            'celular' => $request->info_usuario['celular'],
-            'telefono' => $request->info_usuario['telefono'],
-            'nacimiento' => $request->info_usuario['nacimiento'],
-            'direccion' => $request->info_usuario['direccion'],
-            'municipio' => $request->info_usuario['municipio'],
-            'departamento' => $request->info_usuario['departamento'],
-            'barrio' => $request->info_usuario['barrio'],
-            'zona' => $request->info_usuario['zona'],
-        ]);
+        DB::beginTransaction();
 
-        // 2️⃣ Actualizar datos del paciente
-        $paciente = Paciente::where('id', $request->id)->first();
+        try {
+            $informacionUser->update([
+                'name' => $request->info_usuario['name'],
+                'No_document' => $request->info_usuario['No_document'],
+                'type_doc' => $request->info_usuario['type_doc'],
+                'celular' => $request->info_usuario['celular'],
+                'telefono' => $request->info_usuario['telefono'],
+                'nacimiento' => $request->info_usuario['nacimiento'],
+                'direccion' => $request->info_usuario['direccion'],
+                'municipio' => $request->info_usuario['municipio'],
+                'departamento' => $request->info_usuario['departamento'],
+                'barrio' => $request->info_usuario['barrio'],
+                'zona' => $request->info_usuario['zona'],
+            ]);
 
+            $paciente = Paciente::where('id', $request->id)->first();
 
-        $paciente->id_eps = $request->id_eps;
-        $paciente->genero = $request->genero;
-        $paciente->sexo = $request->sexo;
-        $paciente->regimen = $request->regimen;
-        $paciente->vulnerabilidad = $request->vulnerabilidad;
-        $paciente->estado = $request->estado;
-        $paciente->save();
+            $paciente->id_eps = $request->id_eps;
+            $paciente->genero = $request->genero;
+            $paciente->sexo = $request->sexo;
+            $paciente->regimen = $request->regimen;
+            $paciente->vulnerabilidad = $request->vulnerabilidad;
+            $paciente->estado = $request->estado;
+            $paciente->save();
 
-        $idsEnviados = collect($data['plan_manejo_procedimientos'] ?? [])->pluck('id')->filter()->toArray();
-        Plan_manejo_procedimiento::where('id_paciente', $paciente->id)
-            ->whereNotIn('id', $idsEnviados)
-            ->delete();
-        foreach ($data['plan_manejo_procedimientos'] ?? [] as $item) {
-            
-            Plan_manejo_procedimiento::updateOrCreate(
-                ['id' => $item['id'] ?? null], // si existe → busca
-                [
-                    ...$item,
-                    'id_paciente' => $paciente->id
-                ]
-            );
-        }
+            $idsEnviados = collect($data['plan_manejo_procedimientos'] ?? [])->pluck('id')->filter()->toArray();
+            Plan_manejo_procedimiento::where('id_paciente', $paciente->id)
+                ->whereNotIn('id', $idsEnviados)
+                ->delete();
+            foreach ($data['plan_manejo_procedimientos'] ?? [] as $item) {
+                Plan_manejo_procedimiento::updateOrCreate(
+                    ['id' => $item['id'] ?? null],
+                    [
+                        ...$item,
+                        'id_paciente' => $paciente->id
+                    ]
+                );
+            }
 
-        $idsAntecedentes = collect($data['antecedente'] ?? [])->pluck('id')->filter()->toArray();
-        Antecedente::where('id_paciente', $paciente->id)
-            ->whereNotIn('id', $idsAntecedentes)
-            ->delete();
-        foreach ($data['antecedente'] ?? [] as $item) {
-            Antecedente::updateOrCreate(
-                ['id' => $item['id'] ?? null],
-                [
-                    ...$item,
-                    'id_paciente' => $paciente->id
-                ]
-            );
-        }
+            $idsAntecedentes = collect($data['antecedente'] ?? [])->pluck('id')->filter()->toArray();
+            Antecedente::where('id_paciente', $paciente->id)
+                ->whereNotIn('id', $idsAntecedentes)
+                ->delete();
+            foreach ($data['antecedente'] ?? [] as $item) {
+                Antecedente::updateOrCreate(
+                    ['id' => $item['id'] ?? null],
+                    [
+                        ...$item,
+                        'id_paciente' => $paciente->id
+                    ]
+                );
+            }
 
-        if (!empty($request->convenio_id)) {
-            if($request->convenio_id === 'Sin convenio') {
-                DB::table('paciente_has_convenios')->where('id_paciente', $paciente->id)->delete();
-            } else {
-                $convenio = Paciente_has_convenio::where('id_paciente', $paciente->id)->first();
-                if($convenio){
-                    $convenio->id_convenio = $request->convenio_id;
-                    $convenio->save();
+            if (!empty($request->convenio_id)) {
+                if($request->convenio_id === 'Sin convenio') {
+                    DB::table('paciente_has_convenios')->where('id_paciente', $paciente->id)->delete();
                 } else {
-                    DB::table('paciente_has_convenios')->insert([
-                        'id_paciente' => $paciente->id,
-                        'id_convenio' => $request->convenio_id
-                    ]);
+                    $convenio = Paciente_has_convenio::where('id_paciente', $paciente->id)->first();
+                    if($convenio){
+                        $convenio->id_convenio = $request->convenio_id;
+                        $convenio->save();
+                    } else {
+                        DB::table('paciente_has_convenios')->insert([
+                            'id_paciente' => $paciente->id,
+                            'id_convenio' => $request->convenio_id
+                        ]);
+                    }
                 }
             }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Paciente actualizado exitosamente.',
+                'informacion' => $informacionUser,
+                'paciente' => $paciente
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al actualizar Paciente', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al actualizar Paciente'], 500);
         }
-
-        // 3️⃣ Respuesta
-        return response()->json([
-            'success' => true,
-            'message' => 'Paciente actualizado exitosamente.',
-            'informacion' => $informacionUser,
-            'paciente' => $paciente
-        ], 200);
-
     }
 
     /**

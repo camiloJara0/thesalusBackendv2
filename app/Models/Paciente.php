@@ -8,6 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 class Paciente extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'id_eps',
+        'id_infoUsuario',
+        'genero',
+        'sexo',
+        'regimen',
+        'vulnerabilidad',
+        'estado',
+    ];
+
     public function infoUsuario(){
         return $this->belongsTo(InformacionUser::class, 'id_infoUsuario');
     }

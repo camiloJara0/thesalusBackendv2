@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Cita;
 use App\Models\Plan_manejo_procedimiento;
+use App\Http\Requests\StoreCitaRequest;
+use App\Http\Requests\UpdateCitaRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CitaController extends Controller
 {
@@ -136,52 +139,59 @@ class CitaController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreCitaRequest $request)
     {
-        $plan = null;
+        DB::beginTransaction();
 
-        if ($request->procedimiento) {
-            // Validar si ya existe el procedimiento para el paciente
-            $plan = Plan_manejo_procedimiento::where('id_paciente', $request->id_paciente)
-                ->where('codigo', $request->codigo)
-                ->first();
+        try {
+            $plan = null;
 
-            if ($plan) {
-                // Si existe, sumar los días_asignados
-                $plan->dias_asignados += 1;
-                $plan->save();
-            } else {
-                // Si no existe, crear nuevo
-                $plan = Plan_manejo_procedimiento::create([
-                    'id_paciente'    => $request->id_paciente,
-                    'id_medico'      => $request->id_medico,
-                    'procedimiento'  => $request->procedimiento,
-                    'codigo'         => $request->codigo,
-                    'dias_asignados' => $request->dias_asignados ?? 1,
-                ]);
+            if ($request->procedimiento) {
+                $plan = Plan_manejo_procedimiento::where('id_paciente', $request->id_paciente)
+                    ->where('codigo', $request->codigo)
+                    ->first();
+
+                if ($plan) {
+                    $plan->dias_asignados += 1;
+                    $plan->save();
+                } else {
+                    $plan = Plan_manejo_procedimiento::create([
+                        'id_paciente'    => $request->id_paciente,
+                        'id_medico'      => $request->id_medico,
+                        'procedimiento'  => $request->procedimiento,
+                        'codigo'         => $request->codigo,
+                        'dias_asignados' => $request->dias_asignados ?? 1,
+                    ]);
+                }
             }
+
+            $cita = new Cita();
+            $cita->id_paciente        = $request->id_paciente;
+            $cita->id_medico          = $request->id_medico;
+            $cita->id_analisis        = null;
+            $cita->id_servicio        = $request->id_servicio;
+            $cita->motivo             = $request->motivo;
+            $cita->fecha              = $request->fecha;
+            $cita->fechaHasta         = $request->fechaHasta;
+            $cita->hora               = $request->hora ?? '00:00:00';
+            $cita->estado             = 'Inactiva';
+            $cita->motivo_cancelacion = null;
+            $cita->id_procedimiento   = $plan ? $plan->id : $request->id_procedimiento;
+            $cita->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cita registrada exitosamente.',
+                'data'    => $cita
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al registrar Cita', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al registrar Cita'], 500);
         }
-
-        $cita = new Cita();
-        $cita->id_paciente        = $request->id_paciente;
-        $cita->id_medico          = $request->id_medico;
-        $cita->id_analisis        = null;
-        $cita->id_servicio        = $request->id_servicio;
-        $cita->motivo             = $request->motivo;
-        $cita->fecha              = $request->fecha;
-        $cita->fechaHasta         = $request->fechaHasta;
-        $cita->hora               = $request->hora ?? '00:00:00';
-        $cita->estado             = 'Inactiva';
-        $cita->motivo_cancelacion = null;
-        $cita->id_procedimiento   = $plan ? $plan->id : $request->id_procedimiento;
-        $cita->save();
-
-        // Respuesta
-        return response()->json([
-            'success' => true,
-            'message' => 'Cita registrada exitosamente.',
-            'data'    => $cita
-        ], 201);
     }
 
     public function variasCitas(Request $request)
@@ -244,7 +254,7 @@ class CitaController extends Controller
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Error al registrar las citas: ' . $e->getMessage(),
+                'message' => 'Error al registrar las citas',
             ], 500);
         }
         DB::commit();
@@ -274,7 +284,7 @@ class CitaController extends Controller
      * @param  \App\Models\Cita  $cita
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Cita $cita)
+    public function update(UpdateCitaRequest $request, Cita $cita)
     {
         $cita = Cita::where('id', $request->id)->first();
 
@@ -282,7 +292,7 @@ class CitaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Cita no encontrada',
-            ]);
+            ], 404);
         }
 
         $cita->id_servicio = $request->id_servicio;
@@ -294,11 +304,11 @@ class CitaController extends Controller
         $cita->save();
 
         // Respuesta 
-        return response()->json([
-            'success' => true,
-            'message' => 'Cita actualizada exitosamente.',
-            'data' => $cita
-        ], 201);
+            return response()->json([
+                'success' => true,
+                'message' => 'Cita actualizada exitosamente.',
+                'data' => $cita
+            ], 200);
     }
 
     /**

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Nota;
+use App\Http\Requests\StoreNotaRequest;
+use App\Http\Requests\UpdateNotaRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Descripcion_nota;
@@ -36,7 +38,7 @@ class NotaController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreNotaRequest $request)
     {
         // Crear la nueva nota
         $nota = new Nota();
@@ -73,7 +75,7 @@ class NotaController extends Controller
      * @param  \App\Models\Nota  $nota
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Nota $nota)
+    public function update(UpdateNotaRequest $request, Nota $nota)
     {
         DB::beginTransaction();
 
@@ -113,11 +115,12 @@ class NotaController extends Controller
                 'success' => true, 
                 'ids' => $ids,
                 'data' => $nota,
-            ], 201);
+            ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al actualizar Notas Medicas', 'message' => $e->getMessage()], 500);
+            \Log::error('Error al actualizar Nota Médica', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al actualizar Notas Médicas'], 500);
         }
 
     }
@@ -130,17 +133,17 @@ class NotaController extends Controller
      */
     public function destroy(Nota $nota)
     {
+        if(!$nota){
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró nota.'
+            ], 404);
+        }
+
+        DB::beginTransaction();
+
         try {
-
-            if(!$nota){
-                return response()->json([
-                    'success' => true,
-                    'message' => 'No se encontro nota.'
-                ], 500);
-            }
-
             $analisis = Analisis::where('id', $nota->id_analisis)->first();
-            // Eliminar analisis y todos los registros relacionados
             $analisis->diagnosticos()->delete();
             $analisis->enfermedad()->delete();
             $analisis->examenFisico()->delete();
@@ -150,13 +153,17 @@ class NotaController extends Controller
             $nota->delete();
             $analisis->delete();
 
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Reporte de nota medica eliminada exitosamente.'
             ]);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al eliminar Nota Medica', 'message' => $e->getMessage()], 500);
+            DB::rollBack();
+            \Log::error('Error al eliminar Nota Médica', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al eliminar Nota Médica'], 500);
         }
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Profesion;
 use App\Models\Secciones;
 use App\Models\Profesional;
@@ -176,21 +177,27 @@ class ProfesionController extends Controller
     public function destroy(Request $request, Profesion $profesion)
     {
         $profesion = Profesion::where('id', $request->id)->first();
-        if($profesion){
-            // Desactivar la profesión
+
+        if(!$profesion){
+            return response()->json([
+                'success' => false,
+                'message' => 'Profesión no encontrada.',
+            ], 404);
+        }
+
+        DB::beginTransaction();
+
+        try {
             $profesion->estado = 0;
             $profesion->save();
 
-            // Obtener todos los profesionales de esa profesión
             $profesionales = Profesional::where('id_profesion', $profesion->id)->get();
 
-            // Desactivar todos los profesionales
             Profesional::where('id_profesion', $profesion->id)
                 ->update([
                     'estado' => 0,
                 ]);
 
-            // Cancelar todas las citas de esos profesionales
             Cita::whereIn('id_medico', $profesionales->pluck('id'))
                 ->where('estado', 'Inactiva')
                 ->update([
@@ -198,12 +205,17 @@ class ProfesionController extends Controller
                     'motivo_cancelacion' => 'Profesional eliminado',
                 ]);
 
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Profesión y profesionales desactivados exitosamente.'
             ]);
 
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al eliminar Profesión', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al eliminar Profesión'], 500);
         }
-
     }
 }

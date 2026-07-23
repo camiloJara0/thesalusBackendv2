@@ -1,0 +1,410 @@
+================================================================================
+              PLAN DE MEJORA - BACKEND THESALUS v1
+              Seguridad, Validaciones, Manejo de Errores y Tests
+================================================================================
+
+Fecha de elaboracion: 2026-07-22
+Analisis del proyecto: Laravel 9, PHP 8.0+, MySQL, Laravel Sanctum, API REST
+Alcance: 48 modelos, ~45 controladores, ~172 rutas API, 0 tests reales
+
+================================================================================
+1. SEGURIDAD EN GUARDADO DE DATOS
+================================================================================
+
+1.1 VULNERABILIDAD CRITICA: Mass Assignment (Sin $fillable / $guarded)
+--------------------------------------------------------------------------
+PROBLEMA: La mayoria de modelos NO definen $fillable ni $guarded. Esto permite
+que un atacante inyecte campos no deseados al crear/actualizar registros.
+
+Modelos afectados (sin proteccion):
+  - User.php - Sin $fillable
+  - Paciente.php - Sin $fillable
+  - Profesional.php - Sin $fillable
+  - Cita.php - Sin $fillable
+  - Historia_Clinica.php - Sin $fillable
+  - Analisis.php - Sin $fillable
+  - Diagnostico.php - Sin $fillable
+  - Nota.php - Sin $fillable
+  - Todos los modelos de Plan_manejo_*
+  - Entre otros ~40+ modelos
+
+SOLUCION: Agregar $fillable a TODOS los modelos con los campos que deben
+ser asignables masivamente.
+
+ESTADO: FASE 2 EN PROGRESO
+
+1.2 VULNERABILIDAD: SQL Injection en Queries Raw
+--------------------------------------------------------------------------
+PROBLEMA: Uso de interpolacion de strings en clausulas LIKE:
+  // HistoriaClinicaController.php:228
+  $q->where('name', 'like', "%{$request->servicio}%");
+  // CitaController.php:83
+  $query->where('citas.estado', 'like', "%{$request->estado}%");
+
+SOLUCION: Usar parametros bind o sanitizar input.
+
+Archivos afectados:
+  - HistoriaClinicaController.php (lineas 228, 233, 253)
+  - CitaController.php (lineas 83, 87, 91)
+  - PacienteController.php (lineas 52-53)
+
+ESTADO: PENDIENTE
+
+1.3 CONFIGURACION CORS ABIERTA
+--------------------------------------------------------------------------
+PROBLEMA: config/cors.php acepta cualquier origen, metodo y header.
+  'allowed_origins' => ['*'],
+  'allowed_methods' => ['*'],
+  'allowed_headers' => ['*'],
+
+Ademas, controladores de PDF anaden manualmente Access-Control-Allow-Origin: *
+
+SOLUCION:
+  'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+  'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With'],
+  Y eliminar headers CORS manuales de controladores PDF.
+
+Archivos: config/cors.php, HistoriaClinicaController.php, NotaController.php,
+          TerapiaController.php, PlanManejoMedicamentoController.php
+
+ESTADO: PENDIENTE
+
+1.4 SIN RATE LIMITING EN AUTENTICACION
+--------------------------------------------------------------------------
+PROBLEMA: Las rutas de login, recuperar contrasena y verificar codigo no tienen
+throttling. Vulnerable a fuerza bruta.
+
+SOLUCION: Agregar middleware throttle en routes/api.php:
+  Route::post('/v1/login', ...)->middleware('throttle:5,1');
+  Route::post('/v1/recuperarContrasena', ...)->middleware('throttle:3,1');
+  Route::post('/v1/primerIngreso', ...)->middleware('throttle:5,1');
+
+Archivos: routes/api.php
+
+ESTADO: FASE 5 EN PROGRESO
+
+1.5 EXPOSICION DE DATOS SENSIBLES
+--------------------------------------------------------------------------
+PROBLEMAS:
+  - .env contiene APP_DEBUG=true, credenciales de correo real, DB_PASSWORD vacio
+  - Respuestas de error exponen $e->getMessage() con detalles internos
+  - Login retorna objeto user completo posiblemente con campos sensibles
+
+SOLUCION:
+  - Cambiar APP_DEBUG=false en produccion
+  - DB_PASSWORD: asignar contrasena robusta
+  - En respuestas de error: no exponer $e->getMessage() al cliente
+  - Configurar Handler.php para excepciones API seguras
+
+Archivos: .env, app/Exceptions/Handler.php, todos los catch de controladores
+
+ESTADO: PENDIENTE
+
+1.6 AUSENCIA DE AUTORIZACION POR ROLES
+--------------------------------------------------------------------------
+PROBLEMA: Todas las rutas por auth:sanctum son accesibles por cualquier
+usuario autenticado, sin importar su rol.
+
+SOLUCION: Crear middleware de autorizacion por rol.
+  Route::middleware(['auth:sanctum', 'role:Admin'])->group(function () {...});
+
+Archivos: Crear app/Http/Middleware/CheckRole.php, modificar Kernel.php,
+          routes/api.php
+
+ESTADO: PENDIENTE
+
+1.7 PASSWORD DE BASE DE DATOS VACIA
+--------------------------------------------------------------------------
+PROBLEMA: DB_PASSWORD= vacio en .env
+
+SOLUCION: Asignar contrasena robusta a MySQL y actualizar .env
+
+ESTADO: PENDIENTE
+
+1.8 HARDCODING DE DATOS SENSIBLES
+--------------------------------------------------------------------------
+PROBLEMA: Emails hardcodeados en codigo:
+  - ProfesionalController.php:175-179: 'admin@demo.com', 'cata61779@gmail.com'
+  - ProfesionalHasPermisosController.php:204: 'camilojara0000@gmail.com'
+  - UserController.php:87: $user->id_empresa = 1;
+
+SOLUCION: Mover a .env o tabla de configuracion.
+
+ESTADO: PENDIENTE
+
+================================================================================
+2. VALIDACIONES DE CAMPOS
+================================================================================
+
+2.1 CONTROLADORES SIN VALIDACION (CRITICO)
+--------------------------------------------------------------------------
+Los siguientes controladores reciben datos directamente del request sin validar:
+
+  | Controlador                  | Metodos sin validacion            |
+  |------------------------------|-----------------------------------|
+  | UserController               | store, update                     |
+  | PacienteController           | store, update                     |
+  | ProfesionalController        | store (parcial), update (parcial) |
+  | CitaController               | store, update, destroy             |
+  | HistoriaClinicaController    | store, storeNutricion,             |
+  |                              | storeTrabajoSocial, storeNota,     |
+  |                              | update                             |
+  | EpsController                | store (parcial), update            |
+  | DiagnosticoController        | Probablemente sin validacion       |
+  | NotaController               | Probablemente sin validacion       |
+  | TerapiaController            | Probablemente sin validacion       |
+  | AntecedenteController        | Probablemente sin validacion       |
+
+SOLUCION: Crear FormRequest para cada operacion:
+  app/Http/Requests/
+  ├── Login.php                    (ya existe pero debil)
+  ├── StoreUserRequest.php
+  ├── UpdateUserRequest.php
+  ├── StorePacienteRequest.php
+  ├── UpdatePacienteRequest.php
+  ├── StoreProfesionalRequest.php
+  ├── UpdateProfesionalRequest.php
+  ├── StoreCitaRequest.php
+  ├── UpdateCitaRequest.php
+  ├── StoreHistoriaClinicaRequest.php
+  ├── UpdateHistoriaClinicaRequest.php
+  ├── StoreNotaRequest.php
+  ├── StoreAnalisisRequest.php
+  └── ... (uno por cada endpoint de escritura)
+
+ESTADO: PENDIENTE
+
+2.2 CONTROLADORES CON VALIDACION INSUFICIENTE
+--------------------------------------------------------------------------
+KardexController y InsumoController tienen validacion pero incompleta.
+No validan longitudes maximas consistentemente, no validan tipos en todos
+los campos.
+
+ESTADO: PENDIENTE
+
+2.3 VALIDACION A NIVEL DE MODELO
+--------------------------------------------------------------------------
+Ademas de FormRequests, usar $casts y validacion en modelos:
+  protected $casts = [
+      'estado' => 'boolean',
+      'nacimiento' => 'date',
+      'stock' => 'integer',
+  ];
+
+ESTADO: PENDIENTE
+
+================================================================================
+3. MANEJO DE ERRORES
+================================================================================
+
+3.1 HANDLER.PHP VACIO
+--------------------------------------------------------------------------
+PROBLEMA: app/Exceptions/Handler.php no tiene logica personalizada.
+
+SOLUCION: Implementar handler para API:
+  - ValidationException -> 422 con errores detallados
+  - ModelNotFoundException -> 404
+  - AuthenticationException -> 401
+  - AuthorizationException -> 403
+  - ThrottleRequestsException -> 429
+  - Generico -> 500 sin exponer mensaje interno
+
+ESTADO: PENDIENTE
+
+3.2 INCONSISTENCIA EN CODIGOS HTTP
+--------------------------------------------------------------------------
+  | Problema                              | Solucion                  |
+  |---------------------------------------|---------------------------|
+  | 201 para lecturas exitosas             | Cambiar a 200             |
+  | 201 para errores de duplicado          | Cambiar a 409 Conflict    |
+  | 500 para datos duplicados              | Cambiar a 409 Conflict    |
+  | Sin retorno en errores (destroy)       | Agregar return            |
+  | Sin retorno en update (no encontrado)  | Agregar 404               |
+
+ESTADO: PENDIENTE
+
+3.3 ERRORES EXPONEN DETALLES INTERNOS
+--------------------------------------------------------------------------
+PROBLEMA: Multiples controladores retornan $e->getMessage():
+  HistoriaClinicaController.php:443
+  CitaController.php:248
+  ProfesionalHasPermisosController.php
+
+SOLUCION: Loggear internamente, retornar mensaje generico:
+  \Log::error('Error...', ['exception' => $e]);
+  return response()->json(['success' => false, 'message' => 'Error interno'], 500);
+
+ESTADO: PENDIENTE
+
+3.4 TRANSACCIONES SIN ROLLBACK CORRECTO
+--------------------------------------------------------------------------
+PROBLEMA: Algunas operaciones multi-tabla no usan transacciones:
+  - PacienteController::store() modifica 5 tablas sin DB::beginTransaction
+  - PacienteController::update() similar
+
+SOLUCION: Envolver operaciones multi-tabla en transacciones.
+
+ESTADO: PENDIENTE
+
+3.5 BUGS ENCONTRADOS
+--------------------------------------------------------------------------
+  - UserController::update():139 - Variable $usuario no definida
+  - HistoriaClinicaController::traeDatosDiagnosticos():298 - Variable $historia
+    no definida
+  - UserController::destroy():177 - Falta return antes de response()->json()
+  - ProfesionalHasPermisosController::destroy():167 - Falta return
+  - EpsController::update() - Sin retorno si $eps no se encuentra
+  - UserController::login():196 - Retorna HTTP 200 para error (deberia 401/404)
+
+ESTADO: PENDIENTE
+
+================================================================================
+4. PLAN DE TESTS
+================================================================================
+
+4.1 ESTADO ACTUAL: 0 TESTS REALES
+--------------------------------------------------------------------------
+Los archivos existentes son placeholders. No hay factories. La configuracion
+de BD en phpunit.xml esta comentada.
+
+4.2 CONFIGURACION BASE DE TESTS
+--------------------------------------------------------------------------
+Paso 1: Configurar SQLite en memoria:
+  phpunit.xml:
+  <env name="DB_CONNECTION" value="sqlite"/>
+  <env name="DB_DATABASE" value=":memory:"/>
+
+Paso 2: Crear Factories para modelos principales:
+  database/factories/
+  ├── UserFactory.php
+  ├── InformacionUserFactory.php
+  ├── PacienteFactory.php
+  ├── ProfesionalFactory.php
+  ├── ProfesionFactory.php
+  ├── EpsFactory.php
+  ├── EmpresaFactory.php
+  ├── CitaFactory.php
+  ├── HistoriaClinicaFactory.php
+  ├── AnalisisFactory.php
+  ├── ServicioFactory.php
+  ├── DiagnosticoFactory.php
+  ├── AntecedenteFactory.php
+  ├── ConvenioFactory.php
+  ├── InsumoFactory.php
+  ├── MovimientoFactory.php
+  ├── KardexPlantillaFactory.php
+  ├── KardexCampoFactory.php
+  └── NotaFactory.php
+
+Paso 3: Crear trait de autenticacion para tests.
+
+4.3 TESTS UNITARIOS (POR MODELO)
+--------------------------------------------------------------------------
+  tests/Unit/Models/
+  ├── UserTest.php
+  ├── PacienteTest.php
+  ├── ProfesionalTest.php
+  ├── InformacionUserTest.php
+  ├── EpsTest.php
+  ├── CitaTest.php
+  ├── AnalisisTest.php
+  ├── HistoriaClinicaTest.php
+  ├── InsumoTest.php
+  ├── MovimientoTest.php
+  ├── DiagnosticoTest.php
+  ├── KardexPlantillaTest.php
+  └── NotaTest.php
+
+Cada test debe cubrir:
+  - Creacion con datos validos
+  - Campos requeridos
+  - Relaciones (belongsTo, hasMany)
+  - Casts de tipos
+  - Scopes
+
+4.4 TESTS FEATURE / INTEGRACION (POR CONTROLADOR)
+--------------------------------------------------------------------------
+  tests/Feature/Controllers/
+  ├── Auth/
+  │   ├── LoginTest.php
+  │   ├── RegisterUserTest.php
+  │   ├── PasswordRecoveryTest.php
+  │   └── TokenExpirationTest.php
+  ├── PacienteControllerTest.php
+  ├── ProfesionalControllerTest.php
+  ├── UserControllerTest.php
+  ├── CitaControllerTest.php
+  ├── HistoriaClinicaControllerTest.php
+  ├── AnalisisControllerTest.php
+  ├── EpsControllerTest.php
+  ├── KardexControllerTest.php
+  ├── InsumoControllerTest.php
+  ├── MovimientoControllerTest.php
+  ├── NotaControllerTest.php
+  ├── DiagnosticoControllerTest.php
+  ├── TerapiaControllerTest.php
+  ├── ProfesionalHasPermisosControllerTest.php
+  ├── DashboardControllerTest.php
+  ├── ServicioControllerTest.php
+  ├── ConvenioControllerTest.php
+  └── FacturacionControllerTest.php
+
+4.5 TESTS DE SEGURIDAD
+--------------------------------------------------------------------------
+  tests/Feature/Security/
+  ├── AuthorizationTest.php
+  ├── MassAssignmentTest.php
+  ├── SqlInjectionTest.php
+  ├── RateLimitingTest.php
+  ├── TokenExpirationTest.php
+  ├── InputSanitizationTest.php
+  └── CorsTest.php
+
+4.6 COBERTURA OBJETIVO
+--------------------------------------------------------------------------
+  | Modulo                        | Tests esperados | Prioridad |
+  |-------------------------------|-----------------|-----------|
+  | Auth (login, registro, etc.)  | 20-25           | ALTA      |
+  | Pacientes CRUD                | 15-20           | ALTA      |
+  | Profesionales CRUD            | 15-20           | ALTA      |
+  | Historia Clinica + Analisis   | 25-30           | ALTA      |
+  | Citas                         | 15-20           | ALTA      |
+  | Kardex                        | 15-20           | MEDIA     |
+  | Insumos/Movimientos           | 15-20           | MEDIA     |
+  | EPS/Empresas/Servicios        | 10-15           | MEDIA     |
+  | Permisos                      | 10-15           | MEDIA     |
+  | PDFs/Exportacion              | 5-10            | BAJA      |
+  | TOTAL ESTIMADO                | 140-185         |           |
+
+4.7 COMANDO DE VERIFICACION
+--------------------------------------------------------------------------
+  php artisan test --coverage --min=70
+
+================================================================================
+5. ORDEN DE IMPLEMENTACION RECOMENDADO
+================================================================================
+
+  | Fase | Tarea                                                    | Prioridad  |
+  |------|----------------------------------------------------------|------------|
+  |  1   | Corregir bugs (UserController, HistoriaClinicaController)| INMEDIATA  |
+  |  2   | Agregar $fillable a todos los modelos (48 archivos)      | ALTA       |
+  |  3   | Configurar Handler.php para errores API                  | ALTA       |
+  |  4   | Crear FormRequests para endpoints de escritura           | ALTA       |
+  |  5   | Agregar rate limiting a rutas de autenticacion           | ALTA       |
+  |  6   | Configurar CORS restrictivo                              | ALTA       |
+  |  7   | Crear factories y configurar BD de tests                 | ALTA       |
+  |  8   | Escribir tests de autenticacion y autorizacion           | ALTA       |
+  |  9   | Escribir tests de seguridad                              | ALTA       |
+  | 10   | Crear middleware de roles                                 | ALTA       |
+  | 11   | Normalizar codigos HTTP en controladores                  | MEDIA      |
+  | 12   | Sanitizar interpolacion SQL en LIKE                       | MEDIA      |
+  | 13   | Eliminar datos hardcodeados                               | MEDIA      |
+  | 14   | Agregar transacciones en operaciones multi-tabla          | MEDIA      |
+  | 15   | Escribir tests de integracion por controlador             | MEDIA      |
+  | 16   | Securizar .env                                            | MEDIA      |
+  | 17   | Tests de cobertura completa                               | BAJA       |
+
+================================================================================
+FIN DEL PLAN
+================================================================================

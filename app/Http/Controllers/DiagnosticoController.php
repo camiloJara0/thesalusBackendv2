@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Diagnostico;
+use App\Http\Requests\StoreDiagnosticoRequest;
+use App\Http\Requests\UpdateDiagnosticoRequest;
 use Illuminate\Http\Request;
 
 class DiagnosticoController extends Controller
@@ -27,7 +29,7 @@ class DiagnosticoController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreDiagnosticoRequest $request)
     {
         // Crear el nuevo diagnóstico
         $diagnostico = new Diagnostico();
@@ -63,7 +65,7 @@ class DiagnosticoController extends Controller
      * @param  \App\Models\Diagnostico  $diagnostico
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Diagnostico $diagnostico)
+    public function update(UpdateDiagnosticoRequest $request, Diagnostico $diagnostico)
     {
         $diagnostico->id_paciente = $request->id_paciente;
         $diagnostico->id_profesional = $request->id_profesional;
@@ -73,9 +75,10 @@ class DiagnosticoController extends Controller
 
         // Retornar respuesta
         return response()->json([
+            'success' => true,
             'message' => 'Diagnóstico actualizado exitosamente.',
             'data' => $diagnostico
-        ], 201);
+        ], 200);
     }
 
     /**

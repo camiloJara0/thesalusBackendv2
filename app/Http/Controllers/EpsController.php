@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Eps;
+use App\Http\Requests\StoreEpsRequest;
+use App\Http\Requests\UpdateEpsRequest;
 use Illuminate\Http\Request;
 
 class EpsController extends Controller
@@ -28,11 +30,8 @@ class EpsController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreEpsRequest $request)
     {
-        $request->validate([
-            'nombre' => 'required|unique:eps,nombre'
-        ]);
         $eps = new Eps();
         $eps -> nombre = $request->nombre;
         $eps -> codigo = $request->codigo;
@@ -65,7 +64,7 @@ class EpsController extends Controller
      * @param  \App\Models\Eps  $eps
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Eps $eps)
+    public function update(UpdateEpsRequest $request, Eps $eps)
     {
         $eps = Eps::where('id', $request->id)->first();
         if($eps){
@@ -80,6 +79,11 @@ class EpsController extends Controller
                 'data' => $eps
             ], 200);
         }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'EPS no encontrado.',
+        ], 404);
 
     }
 
@@ -103,6 +107,6 @@ class EpsController extends Controller
             'success' => true,
             'message' => 'EPS eliminada exitosamente.',
             'data' => $eps
-        ], 201);
+        ], 200);
     }
 }

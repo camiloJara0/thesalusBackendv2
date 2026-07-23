@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Insumo;
 use App\Models\Tipo_equipo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use League\Csv\Reader;
 use Illuminate\Support\Facades\Log;
 
@@ -51,46 +52,55 @@ class InsumoController extends Controller
             'es_prestable' => 'integer|max:1',
         ]);
 
-        $validated['estado'] = 1;
-        $insumo = Insumo::create($validated);
+        DB::beginTransaction();
 
-        if($request->categoria === 'Medicamento') {
-            $insumo->infoMedicamento()->create([
-                'activo' => $request->activo,
-                'unidad' => $request->unidad,
-                'lote' => $request->lote,
-                'vencimiento' => $request->vencimiento,
-                'inventario_id' => $insumo->id,
-            ]);
-        } else if($request->categoria === 'Insumos médicos') {
-            $insumo->infoInsumo()->create([
-                'unidad' => $request->unidad,
-                'especificaciones' => $request->especificaciones,
-                'lote' => $request->lote,
-                'vencimiento' => $request->vencimiento,
-                'ubicacion' => $request->ubicacion,
-                'inventario_id' => $insumo->id,
-            ]);
-        } else {
-            $tipo_equipo = null;
-            if($request->nombre_tipo){
-                $tipo_equipo = Tipo_equipo::firstOrCreate(['nombre' => $request->nombre_tipo, 'descripcion' => $request->descripcion_tipo]);
+        try {
+            $validated['estado'] = 1;
+            $insumo = Insumo::create($validated);
+
+            if($request->categoria === 'Medicamento') {
+                $insumo->infoMedicamento()->create([
+                    'activo' => $request->activo,
+                    'unidad' => $request->unidad,
+                    'lote' => $request->lote,
+                    'vencimiento' => $request->vencimiento,
+                    'inventario_id' => $insumo->id,
+                ]);
+            } else if($request->categoria === 'Insumos médicos') {
+                $insumo->infoInsumo()->create([
+                    'unidad' => $request->unidad,
+                    'especificaciones' => $request->especificaciones,
+                    'lote' => $request->lote,
+                    'vencimiento' => $request->vencimiento,
+                    'ubicacion' => $request->ubicacion,
+                    'inventario_id' => $insumo->id,
+                ]);
+            } else {
+                $tipo_equipo = null;
+                if($request->nombre_tipo){
+                    $tipo_equipo = Tipo_equipo::firstOrCreate(['nombre' => $request->nombre_tipo, 'descripcion' => $request->descripcion_tipo]);
+                }
+
+                $insumo->infoEquipo()->create([
+                    'serial' => $request->serial,
+                    'tipo_equipo_id' => $request->tipo_equipo_id ?? $tipo_equipo->id,
+                    'inventario_id' => $insumo->id,
+                ]);
             }
 
-            $insumo->infoEquipo()->create([
-                'serial' => $request->serial,
-                'tipo_equipo_id' => $request->tipo_equipo_id ?? $tipo_equipo->id,
-                'inventario_id' => $insumo->id,
-            ]);
+            DB::commit();
 
+            return response()->json([
+                'success' => true,
+                'message' => 'Insumo creado correctamente',
+                'data' => $insumo
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al registrar Insumo', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al registrar Insumo'], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Insumo creado correctamente',
-            'data' => $insumo
-        ], 201);
-
     }
 
     /**
@@ -133,43 +143,53 @@ class InsumoController extends Controller
             'es_prestable' => 'integer|max:1',
         ]);
 
-        $insumo->update($validated);
+        DB::beginTransaction();
 
-        if($request->categoria === 'Medicamento') {
-            $insumo->infoMedicamento()->update([
-                'activo' => $request->activo,
-                'unidad' => $request->unidad,
-                'lote' => $request->lote,
-                'vencimiento' => $request->vencimiento,
-                'inventario_id' => $insumo->id,
-            ]);
-        } else if($request->categoria === 'Insumos médicos') {
-            $insumo->infoInsumo()->update([
-                'unidad' => $request->unidad,
-                'especificaciones' => $request->especificaciones,
-                'lote' => $request->lote,
-                'vencimiento' => $request->vencimiento,
-                'ubicacion' => $request->ubicacion,
-                'inventario_id' => $insumo->id,
-            ]);
-        } else {
-            $tipo_equipo = null;
-            if($request->nombre_tipo){
-                $tipo_equipo = Tipo_equipo::firstOrCreate(['nombre' => $request->nombre_tipo, 'descripcion' => $request->descripcion_tipo]);
+        try {
+            $insumo->update($validated);
+
+            if($request->categoria === 'Medicamento') {
+                $insumo->infoMedicamento()->update([
+                    'activo' => $request->activo,
+                    'unidad' => $request->unidad,
+                    'lote' => $request->lote,
+                    'vencimiento' => $request->vencimiento,
+                    'inventario_id' => $insumo->id,
+                ]);
+            } else if($request->categoria === 'Insumos médicos') {
+                $insumo->infoInsumo()->update([
+                    'unidad' => $request->unidad,
+                    'especificaciones' => $request->especificaciones,
+                    'lote' => $request->lote,
+                    'vencimiento' => $request->vencimiento,
+                    'ubicacion' => $request->ubicacion,
+                    'inventario_id' => $insumo->id,
+                ]);
+            } else {
+                $tipo_equipo = null;
+                if($request->nombre_tipo){
+                    $tipo_equipo = Tipo_equipo::firstOrCreate(['nombre' => $request->nombre_tipo, 'descripcion' => $request->descripcion_tipo]);
+                }
+                $insumo->infoEquipo()->update([
+                    'serial' => $request->serial,
+                    'tipo_equipo_id' => $request->tipo_equipo_id ?? $tipo_equipo->id,
+                    'inventario_id' => $insumo->id,
+                ]);
             }
-            $insumo->infoEquipo()->update([
-                'serial' => $request->serial,
-                'tipo_equipo_id' => $request->tipo_equipo_id ?? $tipo_equipo->id,
-                'inventario_id' => $insumo->id,
-            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Insumo actualizado correctamente',
+                'data' => $insumo
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al actualizar Insumo', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al actualizar Insumo'], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Insumo actualizado correctamente',
-            'data' => $insumo
-        ], 200);
-
     }
 
     /**

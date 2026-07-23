@@ -32,25 +32,25 @@ class InformacionUserController extends Controller
     public function store(Request $request)
     {
 
-        $informacionUser = new informacionUser();
-        $informacionUser->id_usuario = $request->id_usuario;
-        $informacionUser->name = $request->name;
-        $informacionUser->No_document = $request->No_document;
-        $informacionUser->type_doc = $request->type_doc;
-        $informacionUser->celular = $request->celular;
-        $informacionUser->telefono = $request->telefono ?? 0;
-        $informacionUser->nacimiento = $request->nacimiento;
-        $informacionUser->direccion = $request->direccion;
-        $informacionUser->municipio = $request->municipio;
-        $informacionUser->departamento = $request->departamento;
-        $informacionUser->barrio = $request->barrio;
-        $informacionUser->zona = $request->zona;
-        $informacionUser->save();
+        $informacionUser = InformacionUser::create([
+            'id_usuario' => $request->id_usuario,
+            'name' => $request->name,
+            'No_document' => $request->No_document,
+            'type_doc' => $request->type_doc,
+            'celular' => $request->celular,
+            'telefono' => $request->telefono ?? 0,
+            'nacimiento' => $request->nacimiento,
+            'direccion' => $request->direccion,
+            'municipio' => $request->municipio,
+            'departamento' => $request->departamento,
+            'barrio' => $request->barrio,
+            'zona' => $request->zona,
+        ]);
 
-        // Respuesta
         return response()->json([
+            'success' => true,
             'message' => 'Información del usuario creada exitosamente.',
-            'data' => $info
+            'data' => $informacionUser
         ], 201);
     }
 
@@ -81,12 +81,10 @@ class InformacionUserController extends Controller
         if($user->correo != $request->correo){
             $correo = User::where('correo', $request->correo)->first();
             if($correo){
-                // 4️⃣ Respuesta
                 return response()->json([
                     'success' => false,
                     'message' => 'Correo del administrador ya registrado.',
-                    'correo' => $correo,
-                ], 201);
+                ], 409);
             }
 
             $user->correo = $request->correo;
@@ -108,12 +106,11 @@ class InformacionUserController extends Controller
             $informacionUser->save();
         }
         
-        // 4️⃣ Respuesta
         return response()->json([
             'success' => true,
             'message' => 'Administrador actualizado exitosamente.',
             'informacion' => $informacionUser,
-        ], 201);
+        ], 200);
     }
 
     /**

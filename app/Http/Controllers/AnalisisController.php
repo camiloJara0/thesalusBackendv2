@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Analisis;
+use App\Http\Requests\StoreAnalisisRequest;
+use App\Http\Requests\UpdateAnalisisRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 
 class AnalisisController extends Controller
@@ -39,7 +42,7 @@ class AnalisisController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreAnalisisRequest $request)
     {
         // Crear el registro campo por campo
         $analisis = new Analisis();
@@ -78,7 +81,7 @@ class AnalisisController extends Controller
      * @param  \App\Models\Analisis  $analisis
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Analisis $analisis)
+    public function update(UpdateAnalisisRequest $request, Analisis $analisis)
     {
         $analisis = Analisis::where('id', $request->id)->first();
         if($analisis){
@@ -95,7 +98,7 @@ class AnalisisController extends Controller
             'success' => true,
             'message' => 'Análisis actualizado exitosamente.',
             'data' => $analisis
-        ], 201);
+        ], 200);
     }
 
     /**
@@ -106,15 +109,16 @@ class AnalisisController extends Controller
      */
     public function destroy(Analisis $analisis)
     {
-        try {
+        if(!$analisis){
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró análisis.'
+            ], 404);
+        }
 
-            if(!$analisis){
-                return response()->json([
-                    'success' => true,
-                    'message' => 'No se encontro analisis.'
-                ], 500);
-            }
-            // Eliminar analisis y todos los registros relacionados
+        DB::beginTransaction();
+
+        try {
             $analisis->diagnosticos()->delete();
             $analisis->enfermedad()->delete();
             $analisis->examenFisico()->delete();
@@ -124,13 +128,17 @@ class AnalisisController extends Controller
             $analisis->terapia()->delete();
             $analisis->delete();
 
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Análisis eliminado exitosamente.'
             ]);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al eliminar Analisis', 'message' => $e->getMessage()], 500);
+            DB::rollBack();
+            \Log::error('Error al eliminar Análisis', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al eliminar Análisis'], 500);
         }
     }
 }

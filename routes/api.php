@@ -52,11 +52,11 @@ use App\Http\Controllers\ConvenioController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\HistorialInsumoprestadoController;
 
-Route::post('/v1/login', [UserController::class, 'login']);
-Route::post('/v1/recuperarContraseña', [UserController::class, 'verificacion']);
-Route::post('/v1/cambiarContraseña', [UserController::class, 'verificarCodigo']);
-Route::post('/v1/cambiarContraseñaPrimerVez', [UserController::class, 'verificarCodigoPrimerVez']);
-Route::post('/v1/primerIngreso', [UserController::class, 'verificarUsuario']);
+Route::post('/v1/login', [UserController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/v1/recuperarContraseña', [UserController::class, 'verificacion'])->middleware('throttle:3,1');
+Route::post('/v1/cambiarContraseña', [UserController::class, 'verificarCodigo'])->middleware('throttle:5,1');
+Route::post('/v1/cambiarContraseñaPrimerVez', [UserController::class, 'verificarCodigoPrimerVez'])->middleware('throttle:5,1');
+Route::post('/v1/primerIngreso', [UserController::class, 'verificarUsuario'])->middleware('throttle:10,1');
 
 Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function () {
         Route::apiResource('/v1/eps', EpsController::class);
@@ -160,13 +160,13 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::get('/v1/Tratamiento/{id}/pdf', [PlanManejoMedicamentoController::class, 'imprimirTratamiento']);
 
         //Permisos
-        Route::post('/v1/solicitarPermiso', [ProfesionalHasPermisosController::class, 'solicitarPermiso']);
-        Route::post('/v1/aprobarPermiso', [ProfesionalHasPermisosController::class, 'aprobarPermiso']);
-        Route::post('/v1/verificarPermisos', [ProfesionalHasPermisosController::class, 'verificarPermisos']);
-        Route::post('/v1/consumirPermiso', [ProfesionalHasPermisosController::class, 'consumirPermiso']);
+        Route::post('/v1/solicitarPermiso', [ProfesionalHasPermisosController::class, 'solicitarPermiso'])->middleware('throttle:3,1');
+        Route::post('/v1/aprobarPermiso', [ProfesionalHasPermisosController::class, 'aprobarPermiso'])->middleware('throttle:10,1');
+        Route::post('/v1/verificarPermisos', [ProfesionalHasPermisosController::class, 'verificarPermisos'])->middleware('throttle:30,1');
+        Route::post('/v1/consumirPermiso', [ProfesionalHasPermisosController::class, 'consumirPermiso'])->middleware('throttle:10,1');
 
         //Importaciones
-        Route::post('/v1/importarInsumos', [InsumoController::class, 'importar']);
+        Route::post('/v1/importarInsumos', [InsumoController::class, 'importar'])->middleware('throttle:5,1');
         Route::post('/v1/insumosPrestados', [MovimientoController::class, 'insumosPrestados']);
         Route::get('/v1/imprimirComoDato/{id}', [PlanManejoMedicamentoController::class, 'imprimirComodato']);
 });

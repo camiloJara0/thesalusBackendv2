@@ -3,7 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Http\Request\Login;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\RecuperarContrasenaRequest;
+use App\Http\Requests\VerificarCodigoRequest;
+use App\Http\Requests\VerificarCodigoPrimerVezRequest;
+use App\Http\Requests\PrimerIngresoRequest;
 use App\Models\InformacionUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -15,6 +21,7 @@ use App\Models\CodigoVerificacion;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Models\Profesional_has_permisos;
+use App\Models\Empresa;
 
 
 class UserController extends Controller
@@ -49,55 +56,57 @@ class UserController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        // 1️⃣ Buscar o crear el usuario
         $informacionUser = InformacionUser::where('No_document', $request->No_document)->first();
-        $user = $informacionUser ? User::where('id_infoUsuario', $informacionUser->id)->first() : null;
 
-            $correo = User::where('correo', $request->correo)->first();
-            if($correo){
-                // 4️⃣ Respuesta
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Correo del administrador ya registrado.',
-                    'correo' => $correo,
-                ], 201);
-            }
-        if(!$informacionUser){
-            // 2️⃣ Guardar información adicional en InformacionUser
-            $informacionUser = new InformacionUser();
-            $informacionUser->name = $request->name;
-            $informacionUser->No_document = $request->No_document;
-            $informacionUser->type_doc = $request->type_doc;
-            $informacionUser->celular = $request->celular;
-            $informacionUser->telefono = $request->telefono ?? null;
-            $informacionUser->nacimiento = $request->nacimiento;
-            $informacionUser->direccion = $request->direccion;
-            $informacionUser->municipio = $request->municipio;
-            $informacionUser->departamento = $request->departamento;
-            $informacionUser->barrio = $request->barrio;
-            $informacionUser->zona = $request->zona;
-            $informacionUser->save();
+        if($informacionUser){
+            return response()->json([
+                'success' => false,
+                'message' => 'Cédula ya registrada.',
+            ], 409);
         }
 
-        if(!$user){
-            // guardar user si no existe
-            $user = new User();
-            $user->id_empresa = 1;
-            $user->id_infoUsuario = $informacionUser->id;;
-            $user->correo = $request->correo;
-            $user->contraseña = Hash::make($request->contraseña);
-            $user->rol = 'Admin';
-            $user-> save();
+        DB::beginTransaction();
+
+        try {
+            $informacionUser = InformacionUser::create([
+                'name' => $request->name,
+                'No_document' => $request->No_document,
+                'type_doc' => $request->type_doc,
+                'celular' => $request->celular,
+                'telefono' => $request->telefono ?? null,
+                'nacimiento' => $request->nacimiento,
+                'direccion' => $request->direccion,
+                'municipio' => $request->municipio,
+                'departamento' => $request->departamento,
+                'barrio' => $request->barrio,
+                'zona' => $request->zona,
+            ]);
+
+            $empresa = Empresa::first();
+
+            $user = User::create([
+                'id_empresa' => $empresa->id,
+                'id_infoUsuario' => $informacionUser->id,
+                'correo' => $request->correo,
+                'contraseña' => Hash::make($request->contraseña),
+                'rol' => 'Admin',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Administrador registrado exitosamente.',
+                'informacion' => $informacionUser,
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error al registrar usuario', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'Error al registrar usuario'], 500);
         }
-        
-        // 4️⃣ Respuesta
-        return response()->json([
-            'success' => true,
-            'message' => 'Administrador registrado exitosamente.',
-            'informacion' => $informacionUser,
-        ], 201);
     }
 
     /**
@@ -119,49 +128,50 @@ class UserController extends Controller
      * @param  \App\Models\User  $user
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, User $user)
+    public function update(UpdateUserRequest $request, User $user)
     {
-        // 1️⃣ Buscar o crear el usuario
         $informacionUser = InformacionUser::where('id', $request->id)->first();
-        $user = $informacionUser ? User::where('id_infoUsuario', $request->id)->first() : null;
 
-        if($user->correo != $request->correo){
-            $correo = User::where('correo', $request->correo)->first();
-            if($correo){
-                // 4️⃣ Respuesta
+        if (!$informacionUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Información de usuario no encontrada.',
+            ], 404);
+        }
+
+        $user = User::where('id_infoUsuario', $informacionUser->id)->first();
+
+        if ($user && $user->correo != $request->correo) {
+            $correoExiste = User::where('correo', $request->correo)->first();
+            if ($correoExiste) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Correo del administrador ya registrado.',
-                    'correo' => $correo,
-                ], 201);
+                ], 409);
             }
+            $user->correo = $request->correo;
+            $user->save();
+        }
 
-            $usuario->correo = $request->correo;
-            $usuario->save();
-        }
-        if($informacionUser){
-            // 2️⃣ Guardar información adicional en InformacionUser
-            $informacionUser->name = $request->name;
-            $informacionUser->No_document = $request->No_document;
-            $informacionUser->type_doc = $request->type_doc;
-            $informacionUser->celular = $request->celular;
-            $informacionUser->telefono = $request->telefono ?? null;
-            $informacionUser->nacimiento = $request->nacimiento;
-            $informacionUser->direccion = $request->direccion;
-            $informacionUser->municipio = $request->municipio;
-            $informacionUser->departamento = $request->departamento;
-            $informacionUser->barrio = $request->barrio;
-            $informacionUser->zona = $request->zona;
-            $informacionUser->save();
-        }
-        
-        // 4️⃣ Respuesta
+        $informacionUser->update([
+            'name' => $request->name,
+            'No_document' => $request->No_document,
+            'type_doc' => $request->type_doc,
+            'celular' => $request->celular,
+            'telefono' => $request->telefono ?? null,
+            'nacimiento' => $request->nacimiento,
+            'direccion' => $request->direccion,
+            'municipio' => $request->municipio,
+            'departamento' => $request->departamento,
+            'barrio' => $request->barrio,
+            'zona' => $request->zona,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Administrador actualizado exitosamente.',
             'informacion' => $informacionUser,
-        ], 201);
-
+        ], 200);
     }
 
     /**
@@ -174,18 +184,14 @@ class UserController extends Controller
     {
         $user->estado = 0;
         $user->save();
-        response()->json([
+        return response()->json([
+            'success' => true,
             'message' => 'User desactivado exitosamente.'
-        ]);
+        ], 200);
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'correo' => 'required|email',
-            'contraseña' => 'required',
-        ]);
-
         $user = User::where('correo', $request->correo)->first();
 
         if (!$user) {
@@ -193,15 +199,15 @@ class UserController extends Controller
                 'success' => false,
                 'type'    => 'USER_NOT_FOUND',
                 'message' => 'El correo no se encuentra registrado'
-            ], 200);
+            ], 403);
         }
 
         if ($user->estado == 0){
             return response()->json([
                 'success' => false,
                 'type'    => 'USER_DELETE',
-                'message' => 'Usuario Eliminado'
-            ], 200);
+                'message' => 'Usuario deshabilitado'
+            ], 403);
         }
 
         $registro = Profesional_has_permisos::where('codigo', $request->contraseña)
@@ -213,7 +219,7 @@ class UserController extends Controller
                 'success' => false,
                 'type'    => 'INVALID_PASSWORD',
                 'message' => 'La contraseña es incorrecta'
-            ], 200);
+            ], 403);
         }
 
         $tokenResult = $user->createToken('auth_token');
@@ -309,9 +315,8 @@ class UserController extends Controller
 
     }
 
-    public function verificacion(Request $request)
+    public function verificacion(RecuperarContrasenaRequest $request)
     {
-        $request->validate(['correo' => 'required|email']);
 
         $usuario = User::where('correo', $request->correo)->first();
 
@@ -319,7 +324,7 @@ class UserController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Correo no registrado'
-            ]);
+            ], 404);
         }
 
         $codigo = Str::random(6);
@@ -338,13 +343,8 @@ class UserController extends Controller
         ]);
     }
 
-    public function verificarCodigo(Request $request)
+    public function verificarCodigo(VerificarCodigoRequest $request)
     {
-        $request->validate([
-            'correo' => 'required|email',
-            'codigo' => 'required|string',
-            'contraseña' => 'required|min:6'
-        ]);
 
         $registro = CodigoVerificacion::where('correo', $request->correo)
             ->where('codigo', $request->codigo)
@@ -366,12 +366,8 @@ class UserController extends Controller
         return response()->json(['success' => true, 'message' => 'Contraseña actualizada correctamente']);
     }
 
-    public function verificarCodigoPrimerVez(Request $request)
+    public function verificarCodigoPrimerVez(VerificarCodigoPrimerVezRequest $request)
     {
-        $request->validate([
-            'codigo' => 'required|string',
-            'contraseña' => 'required|min:6'
-        ]);
 
         $correo = CodigoVerificacion::where('codigo', $request->codigo)->first();
 
@@ -395,9 +391,8 @@ class UserController extends Controller
         return response()->json(['success' => true, 'message' => 'Contraseña actualizada correctamente']);
     }
 
-    public function verificarUsuario(Request $request)
+    public function verificarUsuario(PrimerIngresoRequest $request)
     {
-        $request->validate(['correo' => 'required|email']);
 
         $usuario = User::where('correo', $request->correo)->first();
 
@@ -405,7 +400,7 @@ class UserController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Correo no registrado'
-            ]);
+            ], 404);
         }
 
         if($usuario->contraseña == null){
