@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tipo_equipo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TipoEquipoController extends Controller
 {
@@ -28,7 +29,7 @@ class TipoEquipoController extends Controller
      */
     public function create()
     {
-        //
+        
     }
 
     /**
@@ -39,7 +40,26 @@ class TipoEquipoController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'nombre' => 'required|string|unique:tipo_equipos,nombre',
+            'descripcion' => 'required|string'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $tipo_equipo = Tipo_equipo::create($validated);
+
+            DB::commit();
+            return response()->json(['success' => true, 'data' => $tipo_equipo, 'message' => 'Tipo de equipo creado'], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Error al crear tipo de equipo'], 500);
+        }
+
+        return response()->json([
+            'sucess' => true,
+            'data' => $tipo_equipo
+        ], 201);
     }
 
     /**
@@ -73,7 +93,8 @@ class TipoEquipoController extends Controller
      */
     public function update(Request $request, Tipo_equipo $tipo_equipo)
     {
-        //
+        $tipo_equipo->update($request->all());
+        return $tipo_equipo;
     }
 
     /**

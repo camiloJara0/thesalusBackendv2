@@ -11,6 +11,9 @@ class Info_equipo extends Model
 
     protected $fillable = [
         'serial',
+        'marca',
+        'modelo',
+        'registro_sanitario',
         'tipo_equipo_id',
         'inventario_id',
     ];

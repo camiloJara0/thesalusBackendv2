@@ -83,6 +83,9 @@ class InsumoController extends Controller
 
                 $insumo->infoEquipo()->create([
                     'serial' => $request->serial,
+                    'marca' => $request->marca,
+                    'modelo' => $request->modelo,
+                    'registro_sanitario' => $request->registro_sanitario,
                     'tipo_equipo_id' => $request->tipo_equipo_id ?? $tipo_equipo->id,
                     'inventario_id' => $insumo->id,
                 ]);
@@ -99,7 +102,7 @@ class InsumoController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al registrar Insumo', ['exception' => $e]);
-            return response()->json(['success' => false, 'message' => 'Error al registrar Insumo'], 500);
+            return response()->json(['success' => false, 'message' => 'Error al registrar Insumo' . $e], 500);
         }
     }
 
@@ -172,6 +175,9 @@ class InsumoController extends Controller
                 }
                 $insumo->infoEquipo()->update([
                     'serial' => $request->serial,
+                    'marca' => $request->marca,
+                    'modelo' => $request->modelo,
+                    'registro_sanitario' => $request->registro_sanitario,
                     'tipo_equipo_id' => $request->tipo_equipo_id ?? $tipo_equipo->id,
                     'inventario_id' => $insumo->id,
                 ]);
