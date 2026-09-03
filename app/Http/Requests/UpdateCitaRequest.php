@@ -19,7 +19,6 @@ class UpdateCitaRequest extends FormRequest
             'motivo' => 'required|string|max:500',
             'fecha' => 'required|date',
             'fechaHasta' => 'nullable|date|after_or_equal:fecha',
-            'hora' => 'required|date_format:H:i',
             'motivo_edicion' => 'nullable|string|max:500',
         ];
     }
@@ -32,7 +31,6 @@ class UpdateCitaRequest extends FormRequest
             'id_servicio.required' => 'El servicio es obligatorio.',
             'motivo.required' => 'El motivo es obligatorio.',
             'fecha.required' => 'La fecha es obligatoria.',
-            'hora.required' => 'La hora es obligatoria.',
         ];
     }
 }
