@@ -32,7 +32,6 @@ class UpdatePacienteRequest extends FormRequest
             'regimen' => 'required|string|max:50',
             'vulnerabilidad' => 'nullable|string|max:100',
             'estado' => 'required|boolean',
-            'convenio_id' => 'nullable|exist:convenios,id',
         ];
     }
 

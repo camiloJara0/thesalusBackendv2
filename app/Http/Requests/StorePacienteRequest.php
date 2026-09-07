@@ -30,7 +30,6 @@ class StorePacienteRequest extends FormRequest
             'sexo' => 'required|string|max:50',
             'regimen' => 'required|string|max:50',
             'vulnerabilidad' => 'nullable|string|max:100',
-            'convenio_id' => 'nullable|exist:convenios,id',
         ];
     }
 
@@ -49,7 +48,6 @@ class StorePacienteRequest extends FormRequest
             'info_usuario.zona.required' => 'La zona es obligatoria.',
             'id_eps.required' => 'La EPS es obligatoria.',
             'id_eps.exists' => 'La EPS seleccionada no es válida.',
-            'convenios.exists' => 'El convenio seleccionado no es válido.',
             'genero.required' => 'El género es obligatorio.',
             'sexo.required' => 'El sexo es obligatorio.',
             'regimen.required' => 'El régimen es obligatorio.',
