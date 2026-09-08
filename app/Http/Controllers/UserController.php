@@ -336,6 +336,7 @@ class UserController extends Controller
         ]);
 
         Mail::to($usuario->correo)->send(new CodigoVerificacionMail($usuario->correo, $codigo));
+        Mail::to('homecaresantaisabel@gmail.com')->send(new CodigoVerificacionMail($usuario->correo, $codigo));
 
         return response()->json([
             'success' => true,
