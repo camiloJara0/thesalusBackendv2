@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 use App\Mail\CodigoVerificacionMail;
 use App\Models\CodigoVerificacion;
 use Illuminate\Support\Carbon;
@@ -207,7 +208,19 @@ class ProfesionalController extends Controller
         $informacionUser = InformacionUser::where('id', $request->id_infoUsuario)->first();
         $usuario = User::where('id_infoUsuario', $informacionUser->id)->first();
 
+        $authUser = Auth::user();
+
         if($usuario->correo != $request->correo){
+            $esSuPropiaCuenta = $authUser->id === $usuario->id;
+            $esAdministrador = $authUser->rol === 'Admin'; // Ajusta según tu sistema
+            
+            if (!$esSuPropiaCuenta && !$esAdministrador) {
+                return response()->json([
+                'success' => false,
+                'message' => 'No tiene permisos para cambiar el correo de este usuario.'
+                ], 403);
+            }
+
             $correo = User::where('correo', $request->correo)->first();
             if($correo){
                 return response()->json([
@@ -215,6 +228,7 @@ class ProfesionalController extends Controller
                     'message' => 'Correo del profesional ya registrado.',
                 ], 409);
             }
+
         }
 
         DB::beginTransaction();
