@@ -272,6 +272,9 @@ class ProfesionalController extends Controller
                 $profesional->municipio_laboral = $request->municipio_laboral;
                 $profesional->estado = $request->estado;
 
+                $usuario->estado = $request->estado;
+                $usuario->save();
+
             if ($request->hasFile('selloFile') && $request->file('selloFile')->isValid()) {
                 $file     = $request->file('selloFile');
                 $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();

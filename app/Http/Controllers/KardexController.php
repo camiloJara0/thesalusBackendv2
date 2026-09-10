@@ -195,7 +195,7 @@ class KardexController extends Controller
         $request->validate([
             'nombre'        => 'required|string|max:255|unique:kardex_campos,nombre',
             'titulo'        => 'required|string|max:255',
-            'tipo'          => 'required|in:text,boolean,select,date,number,textarea',
+            'tipo'          => 'required|in:text,boolean,select,date,number,textarea,suma,resta,multiplicacion,division',
             'opciones'      => 'nullable|string',
             'descripcion'   => 'nullable|string',
             'valor_defecto' => 'nullable|string',
@@ -225,7 +225,7 @@ class KardexController extends Controller
 
         $request->validate([
             'titulo'        => 'sometimes|string|max:255',
-            'tipo'          => 'sometimes|in:text,boolean,select,date,number,textarea',
+            'tipo'          => 'sometimes|in:text,boolean,select,date,number,textarea,suma,resta,multiplicacion,division',
             'opciones'      => 'nullable|string',
             'descripcion'   => 'nullable|string',
             'valor_defecto' => 'nullable|string',
