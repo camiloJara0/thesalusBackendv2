@@ -363,6 +363,38 @@ class KardexController extends Controller
         ]);
     }
 
+    public function updateCampoPlantilla(Request $request, $idPlantilla)
+    {
+        $plantilla = KardexPlantilla::find($idPlantilla);
+
+        if (!$plantilla) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Plantilla no encontrada.',
+            ], 404);
+        }
+
+        $request->validate([
+            'id_campo'   => 'required|integer|exists:kardex_campos,id',
+            'orden'      => 'nullable|integer',
+            'requerido'  => 'nullable|boolean',
+        ]);
+
+        $pivot = KardexPlantillaCampo::updateOrCreate(
+            ['id_plantilla' => $idPlantilla, 'id_campo' => $request->id_campo],
+            [
+                'orden'     => $request->orden ?? 0,
+                'requerido' => $request->requerido ?? false,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Campo asignado a plantilla exitosamente.',
+            'data'    => $pivot,
+        ]);
+    }
+
     public function removeCampoPlantilla($idPlantilla, $idCampo)
     {
         $deleted = KardexPlantillaCampo::where('id_plantilla', $idPlantilla)

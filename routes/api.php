@@ -109,6 +109,7 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::delete('/v1/kardex/plantilla/{id}', [KardexController::class, 'destroyPlantilla']);
         Route::put('/v1/kardex/plantilla/{id}', [KardexController::class, 'updatePlantilla']);
         Route::post('/v1/kardex/plantilla/{idPlantilla}/campo', [KardexController::class, 'addCampoPlantilla']);
+        Route::put('/v1/kardex/plantilla/{idPlantilla}/campo', [KardexController::class, 'updateCampoPlantilla']);
         Route::delete('/v1/kardex/plantilla/{idPlantilla}/campo/{idCampo}', [KardexController::class, 'removeCampoPlantilla']);
 
         Route::apiResource('/v1/historialCambioSonda', HistorialCambioSondaController::class);
