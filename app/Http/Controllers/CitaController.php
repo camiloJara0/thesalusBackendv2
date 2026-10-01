@@ -9,6 +9,8 @@ use App\Http\Requests\UpdateCitaRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Profesional;
 
 class CitaController extends Controller
 {
@@ -54,6 +56,7 @@ class CitaController extends Controller
 
     public function citasPaginadas(Request $request)
     {
+        $authUser = Auth::user();
         $ultimoId  = $request->input('ultimo_id', 0);
         $porPagina = $request->input('por_pagina', 50);
 
@@ -65,6 +68,11 @@ class CitaController extends Controller
 
         if ($ultimoId > 0) {
             $query->where('id', '<', $ultimoId);
+        }
+
+        if ($authUser->rol == 'Profesional'){
+            $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
+            $query->where('id_medico', $profesional->id);
         }
 
         $citas = $query
