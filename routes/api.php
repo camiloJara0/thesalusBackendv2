@@ -121,6 +121,7 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::apiResource('/v1/prestaciones', HistorialInsumoprestadoController::class);
         
         Route::apiResource('/v1/citas', CitaController::class);
+        Route::get('/v1/infoCitas', [CitaController::class, 'infoCitas']);
         Route::get('/v1/citasHoy', [CitaController::class, 'citasHoy']);
         Route::post('/v1/citasPorRango', [CitaController::class, 'citasPorRango']);
         Route::post('/v1/citasPaginadas', [CitaController::class, 'citasPaginadas']);
