@@ -6,18 +6,18 @@
     <title>CONTRATO DE COMODATO</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            color: #333;
+            font-family: Calibri, Arial, Helvetica, sans-serif;
+            color: #000000;
             font-size: 11px;
             line-height: 1.4;
         }
 
         h3 {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: bold;
             margin-bottom: 8px;
-            color: #1a3a5c;
-            border-bottom: 2px solid #1a3a5c;
+            color: #000000;
+            border-bottom: 2px solid #404040;
             padding-bottom: 4px;
         }
 
@@ -28,36 +28,36 @@
         }
 
         th {
-            background-color: #1a3a5c;
-            color: #fff;
+            background-color: #d9d9d9;
+            color: #000000;
             padding: 6px;
-            font-size: 10px;
+            font-size: 11px;
             text-align: left;
         }
 
         td {
-            border: 1px solid #dcdcdc;
+            border: 1px solid #cccccc;
             padding: 6px;
-            font-size: 10px;
+            font-size: 11px;
         }
 
         tr:nth-child(even) {
-            background-color: #e8eff7;
+            background-color: #ededed;
         }
 
         .section {
             margin-bottom: 18px;
             padding: 10px;
-            background: #f9fbfe;
-            border: 1px solid #e8eff7;
+            background: #f7f7f7;
+            border: 1px solid #cccccc;
             border-radius: 4px;
         }
 
         .title-main {
             text-align: center;
-            font-size: 16px;
+            font-size: 11px;
             font-weight: bold;
-            color: #1a3a5c;
+            color: #000000;
             margin-bottom: 5px;
         }
 
@@ -73,15 +73,15 @@
             left: 0;
             right: 0;
             height: 80px;
-            border-bottom: 3px solid #1a3a5c;
+            border-bottom: 3px solid #404040;
             text-align: center;
             padding-bottom: 10px;
         }
 
         .header-text {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
-            color: #1a3a5c;
+            color: #000000;
         }
 
         @page {
@@ -95,9 +95,9 @@
 
         .firma p {
             margin-top: 40px;
-            border-top: 1px solid #000;
+            border-top: 1px solid #000000;
             padding-top: 5px;
-            font-size: 10px;
+            font-size: 11px;
         }
 
         footer {
@@ -106,9 +106,9 @@
             left: 0;
             right: 0;
             height: 40px;
-            border-top: 2px solid #1a3a5c;
-            font-size: 10px;
-            color: #1a3a5c;
+            border-top: 2px solid #404040;
+            font-size: 11px;
+            color: #000000;
             text-align: center;
             line-height: 20px;
         }
@@ -140,7 +140,7 @@
         <h3>
             COMODANTE ( Empresa )
         </h3>
-        <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
             <tr>
                 <td>Razon Social</td>
                 <td>{{ $empresa->nombre }}</td>

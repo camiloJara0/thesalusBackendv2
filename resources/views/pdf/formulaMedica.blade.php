@@ -10,12 +10,15 @@
     body {
         margin: 0;
         padding: 0;
+        font-family: Calibri, Arial, Helvetica, sans-serif;
+        font-size: 11px;
+        color: #000000;
     }
 
     .bodyPDF {
-        font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
-        color: #2f3542;
-        font-size: 10px;
+        font-family: Calibri, Arial, Helvetica, sans-serif;
+        color: #000000;
+        font-size: 11px;
         line-height: 1.45;
     }
 
@@ -38,21 +41,21 @@
     }
 
     th {
-        background: #eef4fb;
-        color: #24476b;
+        background: #e6e6e6;
+        color: #000000;
         font-weight: bold;
     }
 
     th,
     td {
-        border: 1px solid #d8e0ea;
+        border: 1px solid #cccccc;
         padding: 7px;
         vertical-align: top;
-        font-size: 10px;
+        font-size: 11px;
     }
 
     tr:nth-child(even) {
-        background: #fafbfd;
+        background: #f7f7f7;
     }
 
     /* =======================
@@ -63,13 +66,13 @@
         margin: 18px 0 8px;
         padding: 7px 10px;
 
-        background: #edf5ff;
+        background: #f2f2f2;
 
-        color: #205493;
+        color: #000000;
 
-        font-size: 12px;
+        font-size: 11px;
 
-        border-left: 5px solid #2f80ed;
+        border-left: 5px solid #404040;
 
         border-bottom: none;
 
@@ -93,38 +96,39 @@
     .header-table {
         width: 100%;
         border-collapse: collapse;
-        font-family: DejaVu Sans, Arial, sans-serif;
-        border: 1px solid #BFC9D4;
+        font-family: Calibri, Arial, Helvetica, sans-serif;
+        font-size: 11px;
+        border: 1px solid #b3b3b3;
     }
 
     .header-top {
-        background: #1E5D8C;
-        color: #FFF;
+        background: #d9d9d9;
+        color: #000000;
     }
 
     .header-title {
-        font-size: 15px;
+        font-size: 11px;
         font-weight: bold;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
 
     .header-subtitle {
-        font-size: 10px;
-        color: #EAF3FA;
+        font-size: 11px;
+        color: #000000;
     }
 
     .header-info {
-        font-size: 9px;
-        color: #444;
+        font-size: 11px;
+        color: #000000;
         line-height: 14px;
     }
 
     .logo-box {
         text-align: center;
         vertical-align: middle;
-        background: #FFF;
-        border-right: 1px solid #D8D8D8;
+        background: #ffffff;
+        border-right: 1px solid #d8d8d8;
     }
 
     .logo-box img {
@@ -132,25 +136,25 @@
     }
 
     .company-name {
-        font-size: 10px;
+        font-size: 11px;
         font-weight: bold;
-        color: #1E5D8C;
+        color: #000000;
         margin-top: 3px;
     }
 
     .document-box {
-        background: #F5F8FB;
-        border-left: 1px solid #D8D8D8;
+        background: #f5f5f5;
+        border-left: 1px solid #d8d8d8;
         padding-left: 8px;
     }
 
     .document-box strong {
-        color: #1E5D8C;
+        color: #000000;
     }
 
     .header-divider {
-        background: #EDF2F7;
-        border-top: 1px solid #D7DFE8;
+        background: #ededed;
+        border-top: 1px solid #dddddd;
     }
 
     /* =======================
@@ -159,11 +163,11 @@
 
     .label {
         font-weight: bold;
-        color: #4a5568;
+        color: #000000;
     }
 
     .value {
-        color: #1f2937;
+        color: #000000;
     }
 
     /* =======================
@@ -171,35 +175,35 @@
 ======================= */
 
     .noteBox {
-        border: 1px solid #d9e2ec;
+        border: 1px solid #cccccc;
         padding: 10px;
-        background: #fcfdff;
+        background: #fafafa;
     }
 
     .noteSection {
-        background: #f5f9ff;
+        background: #ececec;
         padding: 5px 8px;
         font-weight: bold;
-        color: #245b9a;
-        border-left: 4px solid #2f80ed;
+        color: #000000;
+        border-left: 4px solid #404040;
         margin-top: 8px;
         margin-bottom: 5px;
     }
 
     .noteItem {
-        border-bottom: 1px solid #eceff3;
+        border-bottom: 1px solid #eeeeee;
         padding: 4px 0;
     }
 
     .noteHour {
         font-weight: bold;
-        color: #245b9a;
+        color: #000000;
         width: 55px;
         display: inline-block;
     }
 
     .noteText {
-        color: #374151;
+        color: #000000;
     }
 
     /* =======================
@@ -207,8 +211,8 @@
 ======================= */
 
     .diagHeader {
-        background: #edf5ff;
-        color: #245b9a;
+        background: #f2f2f2;
+        color: #000000;
     }
 
     /* =======================
@@ -226,12 +230,12 @@
     .signatureName {
         font-weight: bold;
         font-size: 11px;
-        color: #1f2937;
+        color: #000000;
     }
 
     .signatureDoc {
-        font-size: 9px;
-        color: #6b7280;
+        font-size: 11px;
+        color: #000000;
     }
 
     /* =======================
@@ -240,7 +244,7 @@
 
     hr {
         border: none;
-        border-top: 1px solid #dbe3ec;
+        border-top: 1px solid #dddddd;
         margin: 6px 0;
     }
 
@@ -286,26 +290,26 @@
 
                 <td width="25%" rowspan="2" class="document-box">
 
-                    <table class="table-sinBordes" style="width:100%;font-size:8px;border-collapse:collapse;">
+                    <table class="table-sinBordes" style="width:100%;font-size: 11px;border-collapse:collapse;">
 
                         <tr>
                             <td><strong>Código</strong></td>
-                            <td style="color: #000;">HC-{{ $analisis->id }}</td>
+                            <td style="color: #000000;">HC-{{ $analisis->id }}</td>
                         </tr>
 
                         <tr>
                             <td><strong>Versión</strong></td>
-                            <td style="color: #000;">1.0</td>
+                            <td style="color: #000000;">1.0</td>
                         </tr>
 
                         <tr>
                             <td><strong>Fecha</strong></td>
-                            <td style="color: #000;">{{ \Carbon\Carbon::parse($analisis->created_at)->format('Y/m/d') ?? now()->format('Y-m-d') }}</td>
+                            <td style="color: #000000;">{{ \Carbon\Carbon::parse($analisis->created_at)->format('Y/m/d') ?? now()->format('Y-m-d') }}</td>
                         </tr>
 
                         <tr>
                             <td><strong>Página</strong></td>
-                            <td style="color: #000;"><span class="pagenum"></span></td>
+                            <td style="color: #000000;"><span class="pagenum"></span></td>
                         </tr>
 
                     </table>
@@ -318,7 +322,7 @@
 
                 <td style="padding:4px 10px;">
 
-                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size:9px;">
+                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size: 11px;">
 
                         <tr>
 
@@ -379,20 +383,20 @@
     <!-- DIAGNÓSTICOS -->
     <div style="margin-bottom: 20px;">
         <h3
-            style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
+            style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
             FÓRMULA MEDICA
         </h3>
-        <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
             <tr class="diagHeader">
-                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Nombre del medicamento</th>
-                <th style="padding: 8px; border: 1px solid #ddd; text-align: left; width: 15%;">Dosis</th>
-                <th style="padding: 8px; border: 1px solid #ddd; text-align: left; width: 15%;">Cantidad</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">Nombre del medicamento</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left; width: 15%;">Dosis</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left; width: 15%;">Cantidad</th>
             </tr>
             @foreach($medicamentos as $medicamento)
             <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;">{{ $medicamento->medicamento }}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">{{ $medicamento->dosis }}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">{{ $medicamento->cantidad }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $medicamento->medicamento }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $medicamento->dosis }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $medicamento->cantidad }}</td>
             </tr>
             @endforeach
         </table>
@@ -401,11 +405,11 @@
     <!-- FIRMA Y SELLO -->
     <table style="margin-top:40px;">
         <tr>
-            <td style="text-align:center; border-top:1px solid #000;">
+            <td style="text-align:center; border-top:1px solid #000000;">
                 <p><strong>{{ $profesional->name }}</strong></p>
                 <p>{{ $profesional->No_document }}</p>
             </td>
-            <td style="text-align:center; border-top:1px solid #000;">
+            <td style="text-align:center; border-top:1px solid #000000;">
                 @if($profesional->sello)
                 <img src="{{ public_path('storage/'.$profesional->sello) }}"
                     style="width:100px; height:100px; object-fit:contain;" />

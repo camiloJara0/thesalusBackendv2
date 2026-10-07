@@ -27,26 +27,26 @@
 
                 <td width="25%" rowspan="2" class="document-box">
 
-                    <table class="table-sinBordes" style="width:100%;font-size:8px;border-collapse:collapse;">
+                    <table class="table-sinBordes" style="width:100%;font-size: 11px;border-collapse:collapse;">
 
                         <tr>
                             <td><strong>Código</strong></td>
-                            <td style="color: #000;">HC-{{ $id }}</td>
+                            <td style="color: #000000;">HC-{{ $id }}</td>
                         </tr>
 
                         <tr>
                             <td><strong>Versión</strong></td>
-                            <td style="color: #000;">1.0</td>
+                            <td style="color: #000000;">1.0</td>
                         </tr>
 
                         <tr>
                             <td><strong>Fecha</strong></td>
-                            <td style="color: #000;">{{ $fecha }}</td>
+                            <td style="color: #000000;">{{ $fecha }}</td>
                         </tr>
 
                         <tr>
                             <td><strong>Página</strong></td>
-                            <td style="color: #000;"><span>{ PAGENO }</span></td>
+                            <td style="color: #000000;"><span>{ PAGENO }</span></td>
                         </tr>
 
                     </table>
@@ -59,7 +59,7 @@
 
                 <td style="padding:4px 10px;">
 
-                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size:9px;">
+                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size: 11px;">
 
                         <tr>
 

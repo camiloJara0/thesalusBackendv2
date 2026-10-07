@@ -13,12 +13,16 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     body {
         margin: 0;
         padding: 0;
+        font-family: Calibri, Arial, Helvetica, sans-serif;
+        font-size: 11px;
+        color: #000000;
     }
 
     .bodyPDF {
-        font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
-        color: #2f3542;
-        font-size: 10px;
+        text-transform: lowercase;
+        font-family: Calibri, Arial, Helvetica, sans-serif;
+        color: #000000;
+        font-size: 11px;
         line-height: 1.45;
     }
 
@@ -41,21 +45,21 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     }
 
     th {
-        background: #eef4fb;
-        color: #24476b;
+        background: #e6e6e6;
+        color: #000000;
         font-weight: bold;
     }
 
     th,
     td {
-        border: 1px solid #d8e0ea;
+        border: 1px solid #cccccc;
         padding: 7px;
         vertical-align: top;
-        font-size: 10px;
+        font-size: 11px;
     }
 
     tr:nth-child(even) {
-        background: #fafbfd;
+        background: #f7f7f7;
     }
 
     /* =======================
@@ -66,13 +70,13 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
         margin: 18px 0 8px;
         padding: 7px 10px;
 
-        background: #edf5ff;
+        background: #f2f2f2;
 
-        color: #205493;
+        color: #000000;
 
-        font-size: 12px;
+        font-size: 11px;
 
-        border-left: 5px solid #2f80ed;
+        border-left: 5px solid #404040;
 
         border-bottom: none;
 
@@ -96,38 +100,39 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     .header-table {
         width: 100%;
         border-collapse: collapse;
-        font-family: DejaVu Sans, Arial, sans-serif;
-        border: 1px solid #BFC9D4;
+        font-family: Calibri, Arial, Helvetica, sans-serif;
+        font-size: 11px;
+        border: 1px solid #b3b3b3;
     }
 
     .header-top {
-        background: #1E5D8C;
-        color: #FFF;
+        background: #d9d9d9;
+        color: #000000;
     }
 
     .header-title {
-        font-size: 15px;
+        font-size: 11px;
         font-weight: bold;
-        text-transform: uppercase;
+        text-transform: lowercase;
         letter-spacing: 0.5px;
     }
 
     .header-subtitle {
-        font-size: 10px;
-        color: #EAF3FA;
+        font-size: 11px;
+        color: #000000;
     }
 
     .header-info {
-        font-size: 9px;
-        color: #444;
+        font-size: 11px;
+        color: #000000;
         line-height: 14px;
     }
 
     .logo-box {
         text-align: center;
         vertical-align: middle;
-        background: #FFF;
-        border-right: 1px solid #D8D8D8;
+        background: #ffffff;
+        border-right: 1px solid #d8d8d8;
     }
 
     .logo-box img {
@@ -135,25 +140,25 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     }
 
     .company-name {
-        font-size: 10px;
+        font-size: 11px;
         font-weight: bold;
-        color: #1E5D8C;
+        color: #000000;
         margin-top: 3px;
     }
 
     .document-box {
-        background: #F5F8FB;
-        border-left: 1px solid #D8D8D8;
+        background: #f5f5f5;
+        border-left: 1px solid #d8d8d8;
         padding-left: 8px;
     }
 
     .document-box strong {
-        color: #1E5D8C;
+        color: #000000;
     }
 
     .header-divider {
-        background: #EDF2F7;
-        border-top: 1px solid #D7DFE8;
+        background: #ededed;
+        border-top: 1px solid #dddddd;
     }
 
     /* =======================
@@ -162,11 +167,11 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
 
     .label {
         font-weight: bold;
-        color: #4a5568;
+        color: #000000;
     }
 
     .value {
-        color: #1f2937;
+        color: #000000;
     }
 
     /* =======================
@@ -174,35 +179,35 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
 ======================= */
 
     .noteBox {
-        border: 1px solid #d9e2ec;
+        border: 1px solid #cccccc;
         padding: 10px;
-        background: #fcfdff;
+        background: #fafafa;
     }
 
     .noteSection {
-        background: #f5f9ff;
+        background: #ececec;
         padding: 5px 8px;
         font-weight: bold;
-        color: #245b9a;
-        border-left: 4px solid #2f80ed;
+        color: #000000;
+        border-left: 4px solid #404040;
         margin-top: 8px;
         margin-bottom: 5px;
     }
 
     .noteItem {
-        border-bottom: 1px solid #eceff3;
+        border-bottom: 1px solid #eeeeee;
         padding: 4px 0;
     }
 
     .noteHour {
         font-weight: bold;
-        color: #245b9a;
+        color: #000000;
         width: 55px;
         display: inline-block;
     }
 
     .noteText {
-        color: #374151;
+        color: #000000;
     }
 
     /* =======================
@@ -210,8 +215,8 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
 ======================= */
 
     .diagHeader {
-        background: #edf5ff;
-        color: #245b9a;
+        background: #f2f2f2;
+        color: #000000;
     }
 
     /* =======================
@@ -229,12 +234,12 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     .signatureName {
         font-weight: bold;
         font-size: 11px;
-        color: #1f2937;
+        color: #000000;
     }
 
     .signatureDoc {
-        font-size: 9px;
-        color: #6b7280;
+        font-size: 11px;
+        color: #000000;
     }
 
     /* =======================
@@ -243,7 +248,7 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
 
     hr {
         border: none;
-        border-top: 1px solid #dbe3ec;
+        border-top: 1px solid #dddddd;
         margin: 6px 0;
     }
 
@@ -289,26 +294,26 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
 
                 <td width="25%" rowspan="2" class="document-box">
 
-                    <table class="table-sinBordes" style="width:100%;font-size:8px;border-collapse:collapse;">
+                    <table class="table-sinBordes" style="width:100%;font-size: 11px;border-collapse:collapse;">
 
                         <tr>
                             <td><strong>Código</strong></td>
-                            <td style="color: #000;">HC-{{ $analisis->id }}</td>
+                            <td style="color: #000000;">HC-{{ $analisis->id }}</td>
                         </tr>
 
                         <tr>
                             <td><strong>Versión</strong></td>
-                            <td style="color: #000;">1.0</td>
+                            <td style="color: #000000;">1.0</td>
                         </tr>
 
                         <tr>
                             <td><strong>Fecha</strong></td>
-                            <td style="color: #000;">{{ $nota->fecha_nota ?? now()->format('Y-m-d') }}</td>
+                            <td style="color: #000000;">{{ $nota->fecha_nota ?? now()->format('Y-m-d') }}</td>
                         </tr>
 
                         <tr>
                             <td><strong>Página</strong></td>
-                            <td style="color: #000;"><span class="pagenum"></span></td>
+                            <td style="color: #000000;"><span class="pagenum"></span></td>
                         </tr>
 
                     </table>
@@ -321,7 +326,7 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
 
                 <td style="padding:4px 10px;">
 
-                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size:9px;">
+                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size: 11px;">
 
                         <tr>
 
@@ -382,22 +387,22 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     <!-- DIAGNÓSTICOS -->
     <div style="margin-bottom: 20px;">
         <h3
-            style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
+            style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
             DIAGNÓSTICOS
         </h3>
-        <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
             <tr class="diagHeader">
-                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Diagnóstico</th>
-                <th style="padding: 8px; border: 1px solid #ddd; text-align: left; width: 15%;">CIE-10</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">Diagnóstico</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left; width: 15%;">CIE-10</th>
             </tr>
             @forelse($diagnosticos as $diag)
             <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;">{{ $diag->descripcion }}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">{{ $diag->codigo }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $diag->descripcion }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $diag->codigo }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="2" style="padding: 8px; border: 1px solid #ddd;">Sin diagnósticos registrados</td>
+                <td colspan="2" style="padding: 8px; border: 1px solid #cccccc;">Sin diagnósticos registrados</td>
             </tr>
             @endforelse
         </table>
@@ -407,19 +412,19 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     <!-- NOTA DE ENFERMERÍA -->
     <div style="margin-bottom: 20px;">
         <h3
-            style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
+            style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
             NOTA DE ENFERMERÍA
         </h3>
-        <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; display: flex; gap: 5px;">
+        <div style="border: 1px solid #cccccc; padding: 10px; margin-bottom: 15px; display: flex; gap: 5px;">
             <div
-                style="display: flex; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
-                <strong style="font-size: 10px; width: 80px;">Fecha:</strong>
-                <div style="flex: 1; border-left: 1px solid #ddd; padding-left: 10px;">
-                    <p style="font-size: 10px; width: 80px; margin: 0;">{{ $nota->fecha_nota }}</p>
+                style="display: flex; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid #cccccc; padding-bottom: 10px;">
+                <strong style="font-size: 11px; width: 80px;">Fecha:</strong>
+                <div style="flex: 1; border-left: 1px solid #cccccc; padding-left: 10px;">
+                    <p style="font-size: 11px; width: 80px; margin: 0;">{{ $nota->fecha_nota }}</p>
                 </div>
             </div>
             <div class="noteBox" style="display: flex; gap: 10px;">
-                <div style="flex: 1; border-left: 1px solid #ddd; padding-left: 10px; font-size: 9px;">
+                <div style="flex: 1; border-left: 1px solid #cccccc; padding-left: 10px; font-size: 11px;">
                     @foreach($tiposOrden as $tipo)
                     @php
                     $notasTipo = $agrupadoPorTipo[$tipo] ?? collect();
@@ -446,11 +451,11 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     <!-- FIRMA Y SELLO -->
     <table class="signature" style="margin-top:40px;">
         <tr>
-            <td style="text-align:center; border-top:1px solid #000;">
+            <td style="text-align:center; border-top:1px solid #000000;">
                 <p class="signatureName"><strong>{{ $profesional->name }}</strong></p>
                 <p class="signatureDoc">{{ $profesional->No_document }}</p>
             </td>
-            <td style="text-align:center; border-top:1px solid #000;">
+            <td style="text-align:center; border-top:1px solid #000000;">
                 @if($profesional->sello)
                 <img src="{{ public_path('storage/'.$profesional->sello) }}"
                     style="width:100px; height:100px; object-fit:contain;" />
