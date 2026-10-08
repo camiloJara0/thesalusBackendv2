@@ -129,15 +129,9 @@ class CitaController extends Controller
         if ($request->filled('estado')) {
             $query->where('citas.estado', 'like', "%{$request->estado}%");
         }
-        if (
-            $request->filled('name_medico') ||
-            $request->filled('profesional.info_usuario.name')
-        ) {
-            $nombreMedico = $request->input('name_medico')
-                ?: $request->input('profesional.infoUsuario.name');
-
-            $query->whereHas('profesional.info_usuario', function ($q) use ($nombreMedico) {
-                $q->where('name', 'like', "%{$nombreMedico}%");
+        if ($request->filled('name_medico')) {
+            $query->whereHas('profesional.infoUsuario', function ($q) use ($request) {
+                $q->where('name', 'like', "%{$request->name_medico}%");
             });
         }
         if ($request->filled('servicio')) {
