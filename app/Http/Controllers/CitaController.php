@@ -32,12 +32,18 @@ class CitaController extends Controller
     public function infoCitas()
     {
         $authUser = Auth::user();
-        $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
-        // Citas por profesional
+        if ($authUser->rol !== 'Profesional') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Acceso denegado. Solo los profesionales pueden acceder a esta información.'
+            ], 403);
+        }
 
+        $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
+
+        // Citas por profesional
         $citasPorProfesional = Cita::where('id_medico', $profesional->id)
             ->get()->count();
-
         $citasPendientes = Cita::where('id_medico', $profesional->id)
             ->where('estado', 'inactiva')
             ->get()->count();
@@ -123,9 +129,15 @@ class CitaController extends Controller
         if ($request->filled('estado')) {
             $query->where('citas.estado', 'like', "%{$request->estado}%");
         }
-        if ($request->filled('name_medico')) {
-            $query->whereHas('profesional.infoUsuario', function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->name_medico}%");
+        if (
+            $request->filled('name_medico') ||
+            $request->filled('profesional.info_usuario.name')
+        ) {
+            $nombreMedico = $request->input('name_medico')
+                ?: $request->input('profesional.infoUsuario.name');
+
+            $query->whereHas('profesional.info_usuario', function ($q) use ($nombreMedico) {
+                $q->where('name', 'like', "%{$nombreMedico}%");
             });
         }
         if ($request->filled('servicio')) {
