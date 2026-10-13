@@ -1548,20 +1548,20 @@ class HistoriaClinicaController extends Controller
                 ->select('convenios.*')
                 ->first();
 
-            $headerHtml = view('pdf.IndiceHeader', [
-                'servicio' => $analisis->servicio->name ?? $request->servicio,
-                'id'       => $analisis->id,
-                'fecha'    => Carbon::parse(
-                    $analisis->created_at
-                )->format('Y/m/d'),
-                'nombre'   => $convenios->nombre ?? 'Santa Isabel IPS'
-            ])->render();
+            // $headerHtml = view('pdf.IndiceHeader', [
+            //     'servicio' => $analisis->servicio->name ?? $request->servicio,
+            //     'id'       => $analisis->id,
+            //     'fecha'    => Carbon::parse(
+            //         $analisis->created_at
+            //     )->format('Y/m/d'),
+            //     'nombre'   => $convenios->nombre ?? 'Santa Isabel IPS'
+            // ])->render();
 
             switch ($request->servicio) {
 
                 case 'Evolucion':
 
-                    $view = 'pdf.IndiceEvolucion';
+                    $view = 'pdf.evolucion';
 
                     $data = compact(
                         'paciente',
@@ -1576,7 +1576,7 @@ class HistoriaClinicaController extends Controller
 
                 case 'Trabajo Social':
 
-                    $view = 'pdf.IndiceTrabajoSocial';
+                    $view = 'pdf.trabajoSocial';
 
                     $data = compact(
                         'paciente',
@@ -1591,7 +1591,7 @@ class HistoriaClinicaController extends Controller
 
                 case 'Medicina':
 
-                    $view = 'pdf.IndiceMedicina';
+                    $view = 'pdf.medicina';
 
                     $data = compact(
                         'paciente',
@@ -1618,7 +1618,7 @@ class HistoriaClinicaController extends Controller
                         ->where('id_nota', $nota->id)
                         ->get();
 
-                    $view = 'pdf.IndiceNota';
+                    $view = 'pdf.nota';
 
                     $data = compact(
                         'nota',
@@ -1642,7 +1642,7 @@ class HistoriaClinicaController extends Controller
                         ->where('id_analisis', $terapia->id_analisis)
                         ->get();
 
-                    $view = 'pdf.IndiceTerapia';
+                    $view = 'pdf.terapia';
 
                     $data = compact(
                         'terapia',
@@ -1668,7 +1668,7 @@ class HistoriaClinicaController extends Controller
                 'format' => 'A4'
             ]);
 
-            $mpdf->SetHTMLHeader($headerHtml);
+            // $mpdf->SetHTMLHeader($headerHtml);
 
             $contenido = view($view, $data)->render();
 
