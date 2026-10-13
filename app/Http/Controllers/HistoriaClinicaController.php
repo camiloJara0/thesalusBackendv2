@@ -1561,7 +1561,7 @@ class HistoriaClinicaController extends Controller
 
                 case 'Evolucion':
 
-                    $view = 'pdf.evolucion';
+                    $view = 'pdf.IndiceEvolucion';
 
                     $data = compact(
                         'paciente',
@@ -1576,7 +1576,7 @@ class HistoriaClinicaController extends Controller
 
                 case 'Trabajo Social':
 
-                    $view = 'pdf.trabajoSocial';
+                    $view = 'pdf.IndiceTrabajoSocial';
 
                     $data = compact(
                         'paciente',
@@ -1591,7 +1591,7 @@ class HistoriaClinicaController extends Controller
 
                 case 'Medicina':
 
-                    $view = 'pdf.medicina';
+                    $view = 'pdf.IndiceMedicina';
 
                     $data = compact(
                         'paciente',
@@ -1618,7 +1618,7 @@ class HistoriaClinicaController extends Controller
                         ->where('id_nota', $nota->id)
                         ->get();
 
-                    $view = 'pdf.nota';
+                    $view = 'pdf.IndiceNota';
 
                     $data = compact(
                         'nota',
@@ -1642,7 +1642,7 @@ class HistoriaClinicaController extends Controller
                         ->where('id_analisis', $terapia->id_analisis)
                         ->get();
 
-                    $view = 'pdf.terapia';
+                    $view = 'pdf.IndiceTerapia';
 
                     $data = compact(
                         'terapia',
