@@ -1548,14 +1548,14 @@ class HistoriaClinicaController extends Controller
                 ->select('convenios.*')
                 ->first();
 
-            // $headerHtml = view('pdf.IndiceHeader', [
-            //     'servicio' => $analisis->servicio->name ?? $request->servicio,
-            //     'id'       => $analisis->id,
-            //     'fecha'    => Carbon::parse(
-            //         $analisis->created_at
-            //     )->format('Y/m/d'),
-            //     'nombre'   => $convenios->nombre ?? 'Santa Isabel IPS'
-            // ])->render();
+            $headerHtml = view('pdf.IndiceHeader', [
+                'servicio' => $analisis->servicio->name ?? $request->servicio,
+                'id'       => $analisis->id,
+                'fecha'    => Carbon::parse(
+                    $analisis->created_at
+                )->format('Y/m/d'),
+                'nombre'   => $convenios->nombre ?? 'Santa Isabel IPS'
+            ])->render();
 
             switch ($request->servicio) {
 
@@ -1668,7 +1668,7 @@ class HistoriaClinicaController extends Controller
                 'format' => 'A4'
             ]);
 
-            // $mpdf->SetHTMLHeader($headerHtml);
+            $mpdf->SetHTMLHeader($headerHtml);
 
             $contenido = view($view, $data)->render();
 
