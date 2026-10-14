@@ -1443,11 +1443,30 @@ class HistoriaClinicaController extends Controller
             'profesional.infoUsuario'
         );
 
+        // Filtro por servicio
+        if (!empty($servicio)) {
+            $query->whereHas('servicio', function ($q) use ($servicio) {
+                $q->where('plantilla', $servicio);
+            });
+        }
+
         // Filtro por fecha
-        $query->whereBetween('created_at', [
-            Carbon::parse($fechaInicio)->startOfDay(),
-            Carbon::parse($fechaFin)->endOfDay()
-        ]);
+        if ($servicio === 'Nota') {
+            $query->whereBetween('notas.fecha_nota', [
+                Carbon::parse($fechaInicio)->startOfDay(),
+                Carbon::parse($fechaFin)->endOfDay()
+            ])->join('notas', 'analisis.id', '=', 'notas.id_analisis');
+        } else if ($servicio === 'Terapia') {
+            $query->whereBetween('terapia.fecha_terapia', [
+                Carbon::parse($fechaInicio)->startOfDay(),
+                Carbon::parse($fechaFin)->endOfDay()
+            ])->join('terapia', 'analisis.id', '=', 'terapia.id_analisis');
+        } else {
+            $query->whereBetween('created_at', [
+                Carbon::parse($fechaInicio)->startOfDay(),
+                Carbon::parse($fechaFin)->endOfDay()
+            ]);
+        }
 
         // Filtro por profesional
         if (!empty($idProfesional)) {
@@ -1460,13 +1479,6 @@ class HistoriaClinicaController extends Controller
         if (!empty($idPaciente)) {
             $query->whereHas('historia', function ($q) use ($idPaciente) {
                 $q->where('id_paciente', $idPaciente);
-            });
-        }
-
-        // Filtro por servicio
-        if (!empty($servicio)) {
-            $query->whereHas('servicio', function ($q) use ($servicio) {
-                $q->where('plantilla', $servicio);
             });
         }
 
