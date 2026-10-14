@@ -1548,15 +1548,6 @@ class HistoriaClinicaController extends Controller
                 ->select('convenios.*')
                 ->first();
 
-            // $headerHtml = view('pdf.IndiceHeader', [
-            //     'servicio' => $analisis->servicio->name ?? $request->servicio,
-            //     'id'       => $analisis->id,
-            //     'fecha'    => Carbon::parse(
-            //         $analisis->created_at
-            //     )->format('Y/m/d'),
-            //     'nombre'   => $convenios->nombre ?? 'Santa Isabel IPS'
-            // ])->render();
-
             switch ($request->servicio) {
 
                 case 'Evolucion':
@@ -1663,16 +1654,7 @@ class HistoriaClinicaController extends Controller
                     ], 400);
             }
 
-            $mpdf = new Mpdf([
-                'mode' => 'utf-8',
-                'format' => 'A4'
-            ]);
-
-            // $mpdf->SetHTMLHeader($headerHtml);
-
-            $contenido = view($view, $data)->render();
-
-            $mpdf->WriteHTML($contenido);
+            $pdf = Pdf::loadView($view, $data);
 
             $pdfName = sprintf(
                 '%s_%s.pdf',
@@ -1682,7 +1664,7 @@ class HistoriaClinicaController extends Controller
 
             $pdfPath = $tempDir . '/' . $pdfName;
 
-            $mpdf->Output($pdfPath, 'F');
+            file_put_contents($pdfPath, $pdf->output());
 
             $pdfFiles[] = [
                 'path' => $pdfPath,
