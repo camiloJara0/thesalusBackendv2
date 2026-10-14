@@ -1452,15 +1452,15 @@ class HistoriaClinicaController extends Controller
 
         // Filtro por fecha
         if ($servicio === 'Nota') {
-            $query->whereBetween('notas.fecha_nota', [
-                Carbon::parse($fechaInicio)->startOfDay(),
-                Carbon::parse($fechaFin)->endOfDay()
-            ])->join('notas', 'analisis.id', '=', 'notas.id_analisis');
-        } else if ($servicio === 'Terapia') {
-            $query->whereBetween('terapia.fecha_terapia', [
-                Carbon::parse($fechaInicio)->startOfDay(),
-                Carbon::parse($fechaFin)->endOfDay()
-            ])->join('terapia', 'analisis.id', '=', 'terapia.id_analisis');
+            $query->whereHas('nota', function ($q) use ($fechaInicio, $fechaFin) {
+                $q->whereDate('fecha_nota', '>=', $fechaInicio)
+                  ->whereDate('fecha_nota', '<=', $fechaFin);
+            });
+        } elseif ($servicio === 'Terapia') {
+            $query->whereHas('terapia', function ($q) use ($fechaInicio, $fechaFin) {
+                $q->whereDate('fecha_terapia', '>=', $fechaInicio)
+                  ->whereDate('fecha_terapia', '<=', $fechaFin);
+            });
         } else {
             $query->whereBetween('created_at', [
                 Carbon::parse($fechaInicio)->startOfDay(),
