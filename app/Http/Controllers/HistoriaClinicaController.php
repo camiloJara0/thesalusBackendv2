@@ -895,12 +895,16 @@ class HistoriaClinicaController extends Controller
             ->join('convenios', 'paciente_has_convenios.id_convenio', '=', 'convenios.id')
             ->select('convenios.*')
             ->first();
+
+        $examenFisico = DB::table('examen_fisicos')
+            ->where('id_analisis', $analisis->id)
+            ->first();
             
         $pdfs = [];
 
         // PDF principal
         $pdfEvolucion = Pdf::loadView('pdf.evolucion', compact(
-            'paciente','profesional','diagnosticos','analisis','medicamentos', 'convenios'
+            'paciente','profesional','diagnosticos','analisis','medicamentos', 'convenios', 'examenFisico'
         ))->output();
         $tmpEvolucion = tempnam(sys_get_temp_dir(), 'pdf');
         file_put_contents($tmpEvolucion, $pdfEvolucion);

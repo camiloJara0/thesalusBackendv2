@@ -1,3 +1,8 @@
+@php
+// Decodificar el JSON a un array asociativo
+$signos = json_decode($examenFisico->signosVitales, true);
+@endphp
+
 <head>
     <meta charset="UTF-8">
     <style>
@@ -405,7 +410,30 @@
     <div style="margin-bottom: 20px;">
         <h3
             style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
-            EVOLUCIÓN
+            EXAMEN FÍSICO
+        </h3>
+        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+            <tr class="diagHeader"">
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">TA</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">FC</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">FR</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">T</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">SAT o2</th>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $signos['ta'] ?? 'N/A' }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $signos['fc'] ?? 'N/A' }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $signos['fr'] ?? 'N/A' }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $signos['t'] ?? 'N/A' }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $signos['SATo2'] ?? 'N/A' }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3
+            style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
+            Evoluciones
         </h3>
         <div style="margin-bottom: 20px; font-size: 11px;">
             <h3 class="diagHeader" style="padding: 8px; border: 1px solid #cccccc; text-align: center;">Motivo de
@@ -420,7 +448,7 @@
     <!-- EVOLUCION -->
 
     <div style="margin-bottom: 20px; font-size: 11px;">
-        <h3 class="diagHeader" style="padding: 8px; border: 1px solid #cccccc; text-align: center;">RECOMENDACIONES
+        <h3 class="diagHeader" style="padding: 8px; border: 1px solid #cccccc; text-align: center;">Actividades de apoyo o recomendaciones dadas
         </h3>
         <div style="text-align: justify; padding: 10px; border: 1px solid #cccccc;">
             {{ $analisis->analisis }}
@@ -432,16 +460,16 @@
     <table style="margin-top:40px;">
         <tr>
             <td style="text-align:center; border-top:1px solid #000000;">
+                <div style="text-align:center; border-top:1px solid #000000;">
+                    @if($profesional->sello)
+                    <img src="{{ public_path('storage/'.$profesional->sello) }}"
+                        style="width:100px; height:100px; object-fit:contain;" />
+                    @else
+                    <p style="margin-bottom: 50px;"></p>
+                    @endif
+                </div>
                 <p><strong>{{ $profesional->name }}</strong></p>
                 <p>{{ $profesional->No_document }}</p>
-            </td>
-            <td style="text-align:center; border-top:1px solid #000000;">
-                @if($profesional->sello)
-                <img src="{{ public_path('storage/'.$profesional->sello) }}"
-                    style="width:100px; height:100px; object-fit:contain;" />
-                @else
-                <p>Firma y Sello</p>
-                @endif
             </td>
         </tr>
     </table>
