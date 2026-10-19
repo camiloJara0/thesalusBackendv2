@@ -297,7 +297,7 @@
     </p>
 
     <!-- Medicamentos -->
-    <div style="margin: 0px 120px 30px 120px; width: 100%;">
+    <div style="margin: 0px 180px 30px 120px; width: 100%;">
         @foreach($medicamentos as $medicamento)
         <p> - 
             <span >{{ $medicamento->medicamento }},</span>
