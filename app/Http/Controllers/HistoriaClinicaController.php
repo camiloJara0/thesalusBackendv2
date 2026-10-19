@@ -912,7 +912,7 @@ class HistoriaClinicaController extends Controller
 
         // Si hay medicamentos
         if ($medicamentos->count() > 0) {
-            $pdfFormula = Pdf::loadView('pdf.formulaMedica', compact('paciente','profesional','medicamentos','analisis', 'convenios'))->output();
+            $pdfFormula = Pdf::loadView('pdf.formulaMedica', compact('paciente','profesional','medicamentos','analisis', 'convenios', 'diagnosticos'))->output();
             $tmpFormula = tempnam(sys_get_temp_dir(), 'pdf');
             file_put_contents($tmpFormula, $pdfFormula);
             $pdfs[] = $tmpFormula;
@@ -981,7 +981,7 @@ class HistoriaClinicaController extends Controller
 
         // Si hay medicamentos
         if ($medicamentos->count() > 0) {
-            $pdfFormula = Pdf::loadView('pdf.formulaMedica', compact('paciente','profesional','medicamentos','analisis', 'convenios'))->output();
+            $pdfFormula = Pdf::loadView('pdf.formulaMedica', compact('paciente','profesional','medicamentos','analisis', 'convenios', 'diagnosticos'))->output();
             $tmpFormula = tempnam(sys_get_temp_dir(), 'pdf');
             file_put_contents($tmpFormula, $pdfFormula);
             $pdfs[] = $tmpFormula;
@@ -1068,7 +1068,7 @@ class HistoriaClinicaController extends Controller
 
         // Si hay medicamentos
         if ($medicamentos->count() > 0) {
-            $pdfFormula = Pdf::loadView('pdf.formulaMedica', compact('paciente','profesional','medicamentos','analisis', 'convenios'))->output();
+            $pdfFormula = Pdf::loadView('pdf.formulaMedica', compact('paciente','profesional','medicamentos','analisis', 'convenios', 'diagnosticos'))->output();
             $tmpFormula = tempnam(sys_get_temp_dir(), 'pdf');
             file_put_contents($tmpFormula, $pdfFormula);
             $pdfs[] = $tmpFormula;

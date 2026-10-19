@@ -26,7 +26,7 @@ $signos = json_decode($examenFisico->signosVitales, true);
     }
 
     @page {
-        margin: 190px 35px 60px 35px;
+        margin: 220px 35px 60px 35px;
     }
 
     .pagenum:before {
@@ -52,7 +52,7 @@ $signos = json_decode($examenFisico->signosVitales, true);
     th,
     td {
         border: 1px solid #cccccc;
-        padding: 7px;
+        padding: 3px;
         vertical-align: top;
         font-size: 11px;
     }
@@ -69,13 +69,9 @@ $signos = json_decode($examenFisico->signosVitales, true);
         margin: 18px 0 8px;
         padding: 7px 10px;
 
-        background: #f2f2f2;
-
         color: #000000;
 
         font-size: 11px;
-
-        border-left: 5px solid #404040;
 
         border-bottom: none;
 
@@ -90,10 +86,10 @@ $signos = json_decode($examenFisico->signosVitales, true);
 
     header {
         position: fixed;
-        top: -170px;
+        top: -200px;
         left: 0;
         right: 0;
-        height: 150px;
+        height: 180px;
     }
 
     .header-table {
@@ -259,13 +255,14 @@ $signos = json_decode($examenFisico->signosVitales, true);
 
 <body class="bodyPDF">
     <!-- ENCABEZADO -->
+
     <header>
 
         <table class="header-table">
 
             <tr class="header-top">
 
-                <td width="22%" rowspan="2" class="logo-box">
+                <td width="30%" class="logo-box">
 
                     @if($convenios && $convenios->logo && Storage::exists($convenios->logo))
                     <img src="{{ public_path('storage/'.$convenios->logo) }}" style="width:60px; height:auto;">
@@ -279,98 +276,96 @@ $signos = json_decode($examenFisico->signosVitales, true);
 
                 </td>
 
-                <td width="53%" style="padding:6px 6px 0px;text-align:center;">
+                <td width="70%" style="padding:6px 6px 0px;text-align:center;">
 
-                    <div class="header-title">
-                        HISTORIA CLÍNICA
-                    </div>
-
-                    <div class="header-subtitle">
-                        {{ strtoupper($analisis->servicio->name) }}
-                    </div>
-
-                </td>
-
-                <td width="25%" rowspan="2" class="document-box">
-
-                    <table class="table-sinBordes" style="width:100%;font-size: 11px;border-collapse:collapse;">
-
+                    <table class="table-sinBordes">
                         <tr>
-                            <td><strong>Código</strong></td>
-                            <td style="color: #000000;">HC-{{ $analisis->id }}</td>
+                            <td>
+                                Historia domiciliaria {{ strtoupper($analisis->nombreServicio) }}
+                            </td>
+                            <td>
+                                Pagina <span class="pagenum"></span>
+                            </td>
                         </tr>
-
                         <tr>
-                            <td><strong>Versión</strong></td>
-                            <td style="color: #000000;">1.0</td>
+                            <td>
+                                {{ $convenios->nombre ?? 'Santa Isabel IPS' }}
+                            </td>
+                            <td>
+                                <strong class="label">Historia clinica:</strong>
+                                HC-{{ $analisis->id }}
+                            </td>
                         </tr>
-
                         <tr>
-                            <td><strong>Fecha</strong></td>
-                            <td style="color: #000000;">{{ \Carbon\Carbon::parse($analisis->created_at)->format('Y/m/d') ?? now()->format('Y-m-d') }}</td>
+                            <td>
+                                <strong class="label">Telefono:</strong> 6024891626-3176689108-3176401540
+                            </td>
+                            <td>
+                                Email: <a class="label" href="mailto:CONTACTO@ICOMSALUDIPS.COM">CONTACTO@ICOMSALUDIPS.COM</a>
+                            </td>
                         </tr>
-
                         <tr>
-                            <td><strong>Página</strong></td>
-                            <td style="color: #000000;"><span class="pagenum"></span></td>
+                            <td><strong class="label">Identidicacion RC:</strong> {{ $paciente->name }}</td>
+                            <td><strong class="label">No. documento:</strong> {{ $paciente->No_document }}</td>
                         </tr>
-
+                        <tr>
+                            <td>
+                                <strong class="label">Fecha de nacimiento:</strong> {{ $paciente->nacimiento }}
+                            </td>
+                            <td>
+                                <strong class="label">Edad:</strong> {{ \Carbon\Carbon::parse($paciente->nacimiento)->age }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong class="label">Sexo:</strong> {{ $paciente->sexo }}
+                            </td>
+                            <td>
+                                <strong class="label">Regimen:</strong>
+                                {{ $paciente->regimen ?? 'N/A' }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong class="label">Impreso por:</strong> {{ $paciente->sexo }}
+                            </td>
+                            <td>
+                                <strong class="label">Fecha de impresion:</strong>
+                                {{ $paciente->regimen ?? 'N/A' }}
+                            </td>
+                        </tr>
                     </table>
 
                 </td>
-
-            </tr>
-
-            <tr class="header-divider">
-
-                <td style="padding:4px 10px;">
-
-                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size: 11px;">
-
-                        <tr>
-
-                            <td width="35%">
-                                <strong>Proceso:</strong>
-                                Atención Domiciliaria
-                            </td>
-
-                            <td width="35%">
-                                <strong>Documento:</strong>
-                                Registro Clínico
-                            </td>
-
-                            <td width="30%">
-                                <strong>Tipo:</strong>
-                                Evolución
-                            </td>
-
-                        </tr>
-
-                    </table>
-
-                </td>
-
             </tr>
         </table>
 
     </header>
 
     <!-- DATOS DEL PACIENTE -->
-    <h3>DATOS DEL PACIENTE</h3>
     <table>
+
         <tr>
-            <td><strong class="label">Nombre completo:</strong> {{ $paciente->name }}</td>
-            <td></td>
+            <td>
+                <strong class="label">Direccion:</strong> {{ $paciente->direccion }}
+            </td>
+            <td>
+                <strong class="label">Estado Civil:</strong>
+                {{ 'N/A' }}
+            </td>
         </tr>
         <tr>
             <td>
-                <strong class="label">No. documento:</strong> {{ $paciente->No_document }}<br />
-                <strong class="label">Tipo de documento:</strong> {{ $paciente->type_doc }}
+                <strong class="label">Ciudad:</strong> {{ $paciente->municipio }}
             </td>
             <td>
-                <strong class="label">Edad:</strong> {{ \Carbon\Carbon::parse($paciente->nacimiento)->age }}<br />
-                <strong class="label">Sexo:</strong> {{ $paciente->sexo }}
+                <strong class="label">Barrio:</strong>
+                {{ $paciente->barrio ?? 'N/A' }}
             </td>
+        </tr>
+        <tr>
+            <td><strong class="label">Nombre completo:</strong> {{ $paciente->name }}</td>
+            <td></td>
         </tr>
         <tr>
             <td>
@@ -381,39 +376,31 @@ $signos = json_decode($examenFisico->signosVitales, true);
                 {{ $paciente->zona ?? 'N/A' }}
             </td>
         </tr>
+
+        <tr>
+            <td></td>
+        </tr>
     </table>
 
-    <!-- DIAGNÓSTICOS -->
-    <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 10px;">
         <h3
             style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
-            DIAGNÓSTICOS
+            Finalidad y causa externa
         </h3>
-        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
-            <tr class="diagHeader">
-                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">Diagnóstico</th>
-                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left; width: 15%;">CIE-10</th>
-            </tr>
-            @forelse($diagnosticos as $diag)
-            <tr>
-                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $diag->descripcion }}</td>
-                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $diag->codigo }}</td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="2" style="padding: 8px; border: 1px solid #cccccc;">Sin diagnósticos registrados</td>
-            </tr>
-            @endforelse
-        </table>
+        <div style="font-size: 11px;">
+            <div style="text-align: justify; padding: 8px;">
+                {{ $analisis->motivo }}
+            </div>
+        </div>
     </div>
 
-    <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 10px;">
         <h3
-            style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
-            EXAMEN FÍSICO
+            style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px; width">
+            Signos vitales
         </h3>
         <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
-            <tr class="diagHeader"">
+            <tr>
                 <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">TA</th>
                 <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">FC</th>
                 <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">FR</th>
@@ -430,27 +417,38 @@ $signos = json_decode($examenFisico->signosVitales, true);
         </table>
     </div>
 
-    <div style="margin-bottom: 20px;">
+    <!-- DIAGNÓSTICOS -->
+    <div style="margin-bottom: 10px;">
         <h3
             style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
-            Evoluciones
+            Diagnósticos
         </h3>
-        <div style="margin-bottom: 20px; font-size: 11px;">
-            <h3 class="diagHeader" style="padding: 8px; border: 1px solid #cccccc; text-align: center;">Motivo de
-                consulta</h3>
-            <div style="text-align: justify; padding: 10px; border: 1px solid #cccccc;">
-                {{ $analisis->motivo }}
-            </div>
-        </div>
+        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+            <tr>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">Diagnóstico</th>
+                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left; width: 15%;">CIE-10</th>
+            </tr>
+            @forelse($diagnosticos as $diag)
+            <tr>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $diag->descripcion }}</td>
+                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $diag->codigo }}</td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="2" style="padding: 8px; border: 1px solid #cccccc;">Sin diagnósticos registrados</td>
+            </tr>
+            @endforelse
+        </table>
     </div>
 
 
     <!-- EVOLUCION -->
-
-    <div style="margin-bottom: 20px; font-size: 11px;">
-        <h3 class="diagHeader" style="padding: 8px; border: 1px solid #cccccc; text-align: center;">Actividades de apoyo o recomendaciones dadas
+        <h3
+            style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
+            Evoluciones
         </h3>
-        <div style="text-align: justify; padding: 10px; border: 1px solid #cccccc;">
+    <div style="margin-bottom: 20px; font-size: 11px;">
+        <div style="text-align: justify; padding: 8px;">
             {{ $analisis->analisis }}
         </div>
     </div>

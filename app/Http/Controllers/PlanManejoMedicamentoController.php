@@ -268,6 +268,11 @@ class PlanManejoMedicamentoController extends Controller
             ->select('plan_manejo_medicamentos.*', 'insumos.*')
             ->get();
 
+        // Diagnósticos que coincidan con el id_analisis
+        $diagnosticos = DB::table('diagnosticos')
+            ->where('id_analisis', $analisis->id)
+            ->get();
+
         $convenios = DB::table('paciente_has_convenios')
             ->where('id_paciente', $historia->id_paciente)
             ->join('convenios', 'paciente_has_convenios.id_convenio', '=', 'convenios.id')
@@ -277,7 +282,7 @@ class PlanManejoMedicamentoController extends Controller
 
         $fileName = 'Formula_' . $profesional->name . '_' . $analisis->created_at . '.pdf';
 
-        $pdf = Pdf::loadView('pdf.formulaMedica', compact('paciente','profesional','analisis','medicamentos','convenios'));
+        $pdf = Pdf::loadView('pdf.formulaMedica', compact('paciente','profesional','analisis','medicamentos','convenios','diagnosticos'));
         return response($pdf->output(), 200)
             ->header('Content-Type', 'application/pdf')
             ->header('Access-Control-Allow-Origin', '*')

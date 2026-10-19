@@ -11,19 +11,19 @@
         margin: 0;
         padding: 0;
         font-family: Calibri, Arial, Helvetica, sans-serif;
-        font-size: 11px;
+        font-size: 14px;
         color: #000000;
     }
 
     .bodyPDF {
         font-family: Calibri, Arial, Helvetica, sans-serif;
         color: #000000;
-        font-size: 11px;
+        font-size: 14px;
         line-height: 1.45;
     }
 
     @page {
-        margin: 190px 35px 60px 35px;
+        margin: 100px 80px 80px 35px;
     }
 
     .pagenum:before {
@@ -51,11 +51,7 @@
         border: 1px solid #cccccc;
         padding: 7px;
         vertical-align: top;
-        font-size: 11px;
-    }
-
-    tr:nth-child(even) {
-        background: #f7f7f7;
+        font-size: 14px;
     }
 
     /* =======================
@@ -136,7 +132,7 @@
     }
 
     .company-name {
-        font-size: 11px;
+        font-size: 18px;
         font-weight: bold;
         color: #000000;
         margin-top: 3px;
@@ -256,167 +252,71 @@
 
 <div>
     <!-- ENCABEZADO -->
-    <header>
+    <p style="color: #000000; text-align: right; width: 100%;"><span class="pagenum"></span></p>
+    <div>
+        <div style="margin: 0 auto; text-align: center; width: 100%; ">
+            @if($convenios && $convenios->logo && Storage::exists($convenios->logo))
+            <img src="{{ public_path('storage/'.$convenios->logo) }}" style="width:180px; height:auto;">
+            @else
+            <img src="{{ public_path('logo.png') }}" style="width:180px; height:auto;">
+            @endif
 
-        <table class="header-table">
-
-            <tr class="header-top">
-
-                <td width="22%" rowspan="2" class="logo-box">
-
-                    @if($convenios && $convenios->logo && Storage::exists($convenios->logo))
-                    <img src="{{ public_path('storage/'.$convenios->logo) }}" style="width:60px; height:auto;">
-                    @else
-                    <img src="{{ public_path('logo.png') }}" style="width:60px; height:auto;">
-                    @endif
-
-                    <div class="company-name">
-                        {{ $convenios->nombre ?? 'Santa Isabel IPS' }}
-                    </div>
-
-                </td>
-
-                <td width="53%" style="padding:6px 6px 0px;text-align:center;">
-
-                    <div class="header-title">
-                        PLAN DE MANEJO
-                    </div>
-
-                    <div class="header-subtitle">
-                        {{ strtoupper($analisis->servicio->name) }}
-                    </div>
-
-                </td>
-
-                <td width="25%" rowspan="2" class="document-box">
-
-                    <table class="table-sinBordes" style="width:100%;font-size: 11px;border-collapse:collapse;">
-
-                        <tr>
-                            <td><strong>Código</strong></td>
-                            <td style="color: #000000;">HC-{{ $analisis->id }}</td>
-                        </tr>
-
-                        <tr>
-                            <td><strong>Versión</strong></td>
-                            <td style="color: #000000;">1.0</td>
-                        </tr>
-
-                        <tr>
-                            <td><strong>Fecha</strong></td>
-                            <td style="color: #000000;">{{ \Carbon\Carbon::parse($analisis->created_at)->format('Y/m/d') ?? now()->format('Y-m-d') }}</td>
-                        </tr>
-
-                        <tr>
-                            <td><strong>Página</strong></td>
-                            <td style="color: #000000;"><span class="pagenum"></span></td>
-                        </tr>
-
-                    </table>
-
-                </td>
-
-            </tr>
-
-            <tr class="header-divider">
-
-                <td style="padding:4px 10px;">
-
-                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size: 11px;">
-
-                        <tr>
-
-                            <td width="35%">
-                                <strong>Proceso:</strong>
-                                Atención Domiciliaria
-                            </td>
-
-                            <td width="35%">
-                                <strong>Documento:</strong>
-                                Registro Clínico
-                            </td>
-
-                            <td width="30%">
-                                <strong>Tipo:</strong>
-                                Formula Medica
-                            </td>
-
-                        </tr>
-
-                    </table>
-
-                </td>
-
-            </tr>
-        </table>
-
-    </header>
+            <div class="company-name">
+                FORMULA MEDICA
+            </div>
+        </div>
+    </div>
 
     <!-- DATOS DEL PACIENTE -->
-    <h3>DATOS DEL PACIENTE</h3>
-    <table>
+    <table style="margin: 30px 160px 30px 120px;">
         <tr>
-            <td><strong class="label">Nombre completo:</strong> {{ $paciente->name }}</td>
+            <td><strong>Fecha</strong> {{ \Carbon\Carbon::parse($analisis->created_at)->format('Y/m/d') ?? now()->format('Y-m-d') }}</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><strong class="label"> Usuario (a): </strong> {{ $paciente->name }}</td>
             <td></td>
         </tr>
         <tr>
             <td>
-                <strong class="label">No. documento:</strong> {{ $paciente->No_document }}<br />
-                <strong class="label">Tipo de documento:</strong> {{ $paciente->type_doc }}
+                <strong class="label">I.D. </strong> {{ $paciente->No_document }}<br />
             </td>
             <td>
-                <strong class="label">Edad:</strong> {{ \Carbon\Carbon::parse($paciente->nacimiento)->age }}<br />
-                <strong class="label">Sexo:</strong> {{ $paciente->sexo }}
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <strong class="label">EPS:</strong> {{ $paciente->Eps }}
-            </td>
-            <td>
-                <strong class="label">Zona:</strong>
-                {{ $paciente->zona ?? 'N/A' }}
+                <strong class="label">Edad: </strong> {{ \Carbon\Carbon::parse($paciente->nacimiento)->age }}<br />
             </td>
         </tr>
     </table>
 
-    <!-- DIAGNÓSTICOS -->
-    <div style="margin-bottom: 20px;">
-        <h3
-            style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
-            FÓRMULA MEDICA
-        </h3>
-        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
-            <tr class="diagHeader">
-                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left;">Nombre del medicamento</th>
-                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left; width: 15%;">Dosis</th>
-                <th style="padding: 8px; border: 1px solid #cccccc; text-align: left; width: 15%;">Cantidad</th>
-            </tr>
-            @foreach($medicamentos as $medicamento)
-            <tr>
-                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $medicamento->medicamento }}</td>
-                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $medicamento->dosis }}</td>
-                <td style="padding: 8px; border: 1px solid #cccccc;">{{ $medicamento->cantidad }}</td>
-            </tr>
-            @endforeach
-        </table>
+    <!-- Diagnosticos -->
+    <p style="margin: 0px 100px 30px 100px; width: 100%;">
+        @foreach($diagnosticos as $diagnostico)
+        <span>
+            {{ $diagnostico->descripcion }},
+        </span>
+        @endforeach
+    </p>
+
+    <!-- Medicamentos -->
+    <div style="margin: 0px 120px 30px 120px; width: 100%;">
+        @foreach($medicamentos as $medicamento)
+        <p> - 
+            <span >{{ $medicamento->medicamento }},</span>
+            <span >Dosis: {{ $medicamento->dosis }},</span>
+            <span >Cantidad: {{ $medicamento->cantidad }}</span>
+        </p>
+        @endforeach
+
     </div>
 
+    <p style="margin:60px 0px 0px 100px;">Fórmula válida por 90 dÌas</p>
     <!-- FIRMA Y SELLO -->
-    <table style="margin-top:40px;">
-        <tr>
-            <td style="text-align:center; border-top:1px solid #000000;">
-                <p><strong>{{ $profesional->name }}</strong></p>
-                <p>{{ $profesional->No_document }}</p>
-            </td>
-            <td style="text-align:center; border-top:1px solid #000000;">
-                @if($profesional->sello)
-                <img src="{{ public_path('storage/'.$profesional->sello) }}"
-                    style="width:100px; height:100px; object-fit:contain;" />
-                @else
-                <p>Firma y Sello</p>
-                @endif
-            </td>
-        </tr>
-    </table>
+
+    <div style="margin-left: 20px;">
+        @if($profesional->sello)
+        <img src="{{ public_path('storage/'.$profesional->sello) }}"
+            style="width:100px; height:100px; object-fit:contain;" />
+        @else
+        <p>Firma y Sello:</p>
+        @endif
+    </div>
 </div>
