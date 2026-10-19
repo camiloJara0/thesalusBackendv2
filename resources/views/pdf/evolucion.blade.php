@@ -394,6 +394,7 @@ $signos = json_decode($examenFisico->signosVitales, true);
         </div>
     </div>
 
+    @if($examenFisico->signosVitales)
     <div style="margin-bottom: 10px;">
         <h3
             style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px; width">
@@ -416,8 +417,10 @@ $signos = json_decode($examenFisico->signosVitales, true);
             </tr>
         </table>
     </div>
+    @endif
 
     <!-- DIAGNÓSTICOS -->
+    @if($diagnosticos)
     <div style="margin-bottom: 10px;">
         <h3
             style="font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000000; padding-bottom: 5px;">
@@ -440,6 +443,7 @@ $signos = json_decode($examenFisico->signosVitales, true);
             @endforelse
         </table>
     </div>
+    @endif
 
 
     <!-- EVOLUCION -->
