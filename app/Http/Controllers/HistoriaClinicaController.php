@@ -1462,8 +1462,8 @@ class HistoriaClinicaController extends Controller
             });
         } elseif ($servicio === 'Terapia') {
             $query->whereHas('terapia', function ($q) use ($fechaInicio, $fechaFin) {
-                $q->whereDate('fecha_terapia', '>=', $fechaInicio)
-                  ->whereDate('fecha_terapia', '<=', $fechaFin);
+                $q->whereDate('fecha', '>=', $fechaInicio)
+                  ->whereDate('fecha', '<=', $fechaFin);
             });
         } else {
             $query->whereBetween('created_at', [
