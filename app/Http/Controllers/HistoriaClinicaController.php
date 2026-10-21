@@ -25,6 +25,9 @@ use App\Models\Movimiento;
 use App\Models\Insumo;
 use App\Models\Paciente;
 use App\Models\Profesional;
+use App\Models\Export;
+use App\Jobs\ExportZipJob;
+use App\Services\PdfExportService;
 
 use ZipArchive;
 use Illuminate\Support\Facades\File;
@@ -1427,329 +1430,161 @@ class HistoriaClinicaController extends Controller
 
     public function exportarPdf(Request $request)
     {
-
-        $fechaInicio = $request->fechaInicio;
-        $fechaFin = $request->fechaFin;
-        $idPaciente = $request->id_paciente;
-        $idProfesional = $request->id_profesional;
-        $servicio = $request->servicio;
-
-        $query = Analisis::with(
+        $filtros = $request->only([
+            'fechaInicio',
+            'fechaFin',
+            'id_paciente',
+            'id_profesional',
             'servicio',
-            'historia',
-            'diagnosticos',
-            'enfermedad',
-            'examenFisico',
-            'medicamentos',
-            'procedimientos',
-            'nota.descripcionNota',
-            'terapia',
-            'profesional.infoUsuario'
-        );
+        ]);
 
-        // Filtro por servicio
-        if (!empty($servicio)) {
-            $query->whereHas('servicio', function ($q) use ($servicio) {
-                $q->where('plantilla', $servicio);
-            });
-        }
+        $servicioExport = app(PdfExportService::class);
 
-        // Filtro por fecha
-        if ($servicio === 'Nota') {
-            $query->whereHas('nota', function ($q) use ($fechaInicio, $fechaFin) {
-                $q->whereDate('fecha_nota', '>=', $fechaInicio)
-                  ->whereDate('fecha_nota', '<=', $fechaFin);
-            });
-        } elseif ($servicio === 'Terapia') {
-            $query->whereHas('terapia', function ($q) use ($fechaInicio, $fechaFin) {
-                $q->whereDate('fecha', '>=', $fechaInicio)
-                  ->whereDate('fecha', '<=', $fechaFin);
-            });
-        } else {
-            $query->whereBetween('created_at', [
-                Carbon::parse($fechaInicio)->startOfDay(),
-                Carbon::parse($fechaFin)->endOfDay()
-            ]);
-        }
-
-        // Filtro por profesional
-        if (!empty($idProfesional)) {
-            $query->whereHas('profesional', function ($q) use ($idProfesional) {
-                $q->where('id', $idProfesional);
-            });
-        }
-
-        // Filtro por paciente
-        if (!empty($idPaciente)) {
-            $query->whereHas('historia', function ($q) use ($idPaciente) {
-                $q->where('id_paciente', $idPaciente);
-            });
-        }
-
-        $analisisList = $query->get();
-
-        if($request->excel){
+        if ($request->excel) {
             return response()->json([
                 'success' => true,
-                'data' => $analisisList
+                'data' => $servicioExport->datosExcel($filtros),
             ], 200);
         }
 
-        $tempDir = storage_path('app/temp_pdf_' . uniqid());
+        $resultado = $servicioExport->exportarZip($filtros);
 
-        if (!File::exists($tempDir)) {
-            File::makeDirectory($tempDir, 0755, true);
+        if (isset($resultado['error'])) {
+            return response()->json([
+                'error' => $resultado['error'],
+            ], 400);
         }
-
-        $pdfFiles = [];
-
-        foreach ($analisisList as $analisis) {
-
-            $historia = Historia_Clinica::find($analisis->id_historia);
-
-            $id = $analisis->id;
-
-            $paciente = DB::table('pacientes')
-                ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
-                ->join('eps', 'pacientes.id_eps', '=', 'eps.id')
-                ->where('pacientes.id', $historia->id_paciente)
-                ->select(
-                    'pacientes.*',
-                    'informacion_users.*',
-                    'eps.nombre as Eps'
-                )
-                ->first();
-
-            $profesional = DB::table('profesionals')
-                ->join('informacion_users', 'profesionals.id_infoUsuario', '=', 'informacion_users.id')
-                ->where('profesionals.id', $analisis->id_medico)
-                ->select(
-                    'profesionals.*',
-                    'informacion_users.*'
-                )
-                ->first();
-
-            $diagnosticos = DB::table('diagnosticos')
-                ->where('id_analisis', $analisis->id)
-                ->get();
-
-            $medicamentos = DB::table('plan_manejo_medicamentos')
-                ->where('id_analisis', $analisis->id)
-                ->get();
-
-            $procedimientos = DB::table('plan_manejo_procedimientos')
-                ->where('id_analisis', $analisis->id)
-                ->get();
-
-            $antecedentes = DB::table('antecedentes')
-                ->where('id_paciente', $historia->id_paciente)
-                ->get();
-
-            $examenFisico = DB::table('examen_fisicos')
-                ->where('id_analisis', $analisis->id)
-                ->first();
-
-            $enfermedades = DB::table('enfermedads')
-                ->where('id_analisis', $analisis->id)
-                ->first();
-
-            $convenios = DB::table('paciente_has_convenios')
-                ->where('id_paciente', $historia->id_paciente)
-                ->join(
-                    'convenios',
-                    'paciente_has_convenios.id_convenio',
-                    '=',
-                    'convenios.id'
-                )
-                ->select('convenios.*')
-                ->first();
-
-            switch ($request->servicio) {
-
-                case 'Evolucion':
-
-                    $view = 'pdf.evolucion';
-
-                    $data = compact(
-                        'paciente',
-                        'profesional',
-                        'diagnosticos',
-                        'analisis',
-                        'medicamentos',
-                        'convenios'
-                    );
-
-                    break;
-
-                case 'Trabajo Social':
-
-                    $view = 'pdf.trabajoSocial';
-
-                    $data = compact(
-                        'paciente',
-                        'profesional',
-                        'diagnosticos',
-                        'analisis',
-                        'medicamentos',
-                        'convenios'
-                    );
-
-                    break;
-
-                case 'Medicina':
-
-                    $view = 'pdf.medicina';
-
-                    $data = compact(
-                        'paciente',
-                        'profesional',
-                        'diagnosticos',
-                        'analisis',
-                        'antecedentes',
-                        'examenFisico',
-                        'medicamentos',
-                        'procedimientos',
-                        'convenios',
-                        'enfermedades'
-                    );
-
-                    break;
-
-                case 'Nota':
-
-                    $nota = DB::table('notas')
-                        ->where('id_analisis', $analisis->id)
-                        ->first();
-
-                    $descripcion = DB::table('descripcion_nota')
-                        ->where('id_nota', $nota->id)
-                        ->get();
-
-                    $view = 'pdf.nota';
-
-                    $data = compact(
-                        'nota',
-                        'paciente',
-                        'profesional',
-                        'diagnosticos',
-                        'descripcion',
-                        'analisis',
-                        'convenios'
-                    );
-
-                    break;
-
-                case 'Terapia':
-
-                    $terapia = DB::table('terapia')
-                        ->where('id_analisis', $analisis->id)
-                        ->first();
-
-                    $diagnosticosCIF = DB::table('diagnostico_relacionados')
-                        ->where('id_analisis', $terapia->id_analisis)
-                        ->get();
-
-                    $view = 'pdf.terapia';
-
-                    $data = compact(
-                        'terapia',
-                        'paciente',
-                        'profesional',
-                        'diagnosticos',
-                        'diagnosticosCIF',
-                        'analisis',
-                        'convenios'
-                    );
-
-                    break;
-
-                default:
-
-                    return response()->json([
-                        'error' => 'Servicio no válido'
-                    ], 400);
-            }
-
-            $pdf = Pdf::loadView($view, $data);
-
-            $pdfName = sprintf(
-                '%s_%s.pdf',
-                strtoupper($request->servicio),
-                $analisis->id
-            );
-
-            $pdfPath = $tempDir . '/' . $pdfName;
-
-            file_put_contents($pdfPath, $pdf->output());
-
-            $pdfFiles[] = [
-                'path' => $pdfPath,
-                'name' => $pdfName,
-            ];
-        }
-        if ($request->id_paciente) {
-
-            $paciente = Paciente::with('infoUsuario')
-                ->find($request->id_paciente);
-
-            $zipName =
-                strtoupper($request->servicio) .
-                '_PACIENTE_' .
-                Str::slug($paciente->infoUsuario->name, '_') .
-                '.zip';
-
-        } elseif ($request->id_profesional) {
-
-            $profesional = Profesional::with('infoUsuario')
-                ->find($request->id_profesional);
-
-            $zipName =
-                strtoupper($request->servicio) .
-                '_PROFESIONAL_' .
-                Str::slug($profesional->infoUsuario->name, '_') .
-                '.zip';
-
-        } else {
-
-            $zipName =
-                strtoupper($request->servicio) .
-                '_GENERAL.zip';
-        }
-
-        $zipPath = storage_path('app/' . uniqid() . '_' . $zipName);
-
-        $zip = new ZipArchive();
-
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            throw new \Exception('No se pudo crear el ZIP');
-        }
-
-        foreach ($pdfFiles as $pdf) {
-            $zip->addFile(
-                $pdf['path'],
-                $pdf['name']
-            );
-        }
-
-        $zip->close();
-
-        foreach ($pdfFiles as $pdf) {
-            if (file_exists($pdf['path'])) {
-                unlink($pdf['path']);
-            }
-        }
-
-        @rmdir($tempDir);
 
         return response()->download(
-            $zipPath,
-            $zipName,
+            $resultado['zip_path'],
+            $resultado['zip_name'],
             [
                 'Content-Type' => 'application/zip',
                 'Access-Control-Allow-Origin' => '*',
-                'Access-Control-Expose-Headers' => 'Content-Disposition'
+                'Access-Control-Expose-Headers' => 'Content-Disposition',
             ]
         )->deleteFileAfterSend(true);
+    }
 
+    public function exportarPdfAsync(Request $request)
+    {
+        $servicio = $request->servicio;
+
+        if (!in_array($servicio, PdfExportService::SERVICIOS, true)) {
+            return response()->json([
+                'error' => 'Servicio no válido',
+            ], 400);
+        }
+
+        $filtros = $request->only([
+            'fechaInicio',
+            'fechaFin',
+            'id_paciente',
+            'id_profesional',
+            'servicio',
+        ]);
+
+        $servicioExport = app(PdfExportService::class);
+
+        $export = Export::create([
+            'user_id' => $request->user()?->id,
+            'servicio' => $servicio,
+            'filtros' => $filtros,
+            'estado' => 'pendiente',
+            'total' => 0,
+            'completados' => 0,
+            'zip_name' => $servicioExport->nombreZip($filtros),
+        ]);
+
+        ExportZipJob::dispatch($export->id);
+
+        return response()->json([
+            'success' => true,
+            'export_id' => $export->id,
+        ], 202);
+    }
+
+    public function estadoExport(Request $request, $id)
+    {
+        $export = Export::where('id', $id);
+
+        if ($request->user()) {
+            $export->where('user_id', $request->user()->id);
+        }
+
+        $export = $export->first();
+
+        if (!$export) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Exportación no encontrada',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'estado' => $export->estado,
+            'total' => $export->total,
+            'completados' => $export->completados,
+        ]);
+    }
+
+    public function descargarExport(Request $request, $id)
+    {
+        $export = Export::where('id', $id);
+
+        if ($request->user()) {
+            $export->where('user_id', $request->user()->id);
+        }
+
+        $export = $export->first();
+
+        if (!$export) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Exportación no encontrada',
+            ], 404);
+        }
+
+        if ($export->estado !== 'lista' || !$export->zip_path || !File::exists($export->zip_path)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La exportación aún no está lista',
+            ], 409);
+        }
+
+        return response()->download(
+            $export->zip_path,
+            $export->zip_name ?: ($export->id . '.zip'),
+            [
+                'Content-Type' => 'application/zip',
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Expose-Headers' => 'Content-Disposition',
+            ]
+        )->deleteFileAfterSend(true);
+    }
+
+    public function exportarExcel(Request $request)
+    {
+        $servicio = $request->servicio;
+
+        if (!in_array($servicio, PdfExportService::SERVICIOS, true)) {
+            return response()->json([
+                'error' => 'Servicio no válido',
+            ], 400);
+        }
+
+        $filtros = $request->only([
+            'fechaInicio',
+            'fechaFin',
+            'id_paciente',
+            'id_profesional',
+            'servicio',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => app(PdfExportService::class)->datosExcel($filtros),
+        ], 200);
     }
 }
