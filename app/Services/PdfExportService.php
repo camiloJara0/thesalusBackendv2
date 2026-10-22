@@ -261,7 +261,7 @@ class PdfExportService
         }
     }
 
-    public function renderizarLista($analisisList, string $servicio, string $directorio, array $contexto): array
+    public function renderizarLista($analisisList, string $servicio, string $directorio, array $contexto, array $filtros): array
     {
         $pdfFiles = [];
 
@@ -274,7 +274,17 @@ class PdfExportService
 
             $pdf = Pdf::loadView($datos['view'], $datos['data']);
 
-            $pdfName = sprintf('%s_%s.pdf', strtoupper($servicio), $analisis->id);
+            $pdfName = '';
+            if (!empty($filtros['id_profesional'])) {
+                $nombreProfesional = $datos['data']['profesional']->name ?? 'profesional';
+                $pdfName = sprintf('%s_%s_%s_%s.pdf', strtoupper($servicio), $analisis->id, $nombreProfesional, Carbon::parse($analisis->created_at)->format('Ymd'));
+            } else if (!empty($filtros['id_paciente'])) {
+                $nombrePaciente = $datos['data']['paciente']->name ?? 'paciente';
+                $pdfName = sprintf('%s_%s_%s_%s.pdf', strtoupper($servicio), $analisis->id, $nombrePaciente, Carbon::parse($analisis->created_at)->format('Ymd'));
+            } else {
+                $pdfName = sprintf('%s_%s_%s.pdf', strtoupper($servicio), $analisis->id, Carbon::parse($analisis->created_at)->format('Ymd'));
+            }
+
             $pdfPath = $directorio . '/' . $pdfName;
 
             file_put_contents($pdfPath, $pdf->output());
@@ -298,7 +308,7 @@ class PdfExportService
 
             return $servicio . '_PROFESIONAL_' . Str::slug($nombre, '_') . '.zip';
         }
-        
+
         if (!empty($filtros['id_paciente'])) {
             $paciente = Paciente::with('infoUsuario')->find($filtros['id_paciente']);
             $nombre = $paciente && $paciente->infoUsuario ? $paciente->infoUsuario->name : 'paciente';
@@ -357,7 +367,7 @@ class PdfExportService
             File::makeDirectory($tempDir, 0755, true);
         }
 
-        $pdfFiles = $this->renderizarLista($analisisList, $servicio, $tempDir, $contexto);
+        $pdfFiles = $this->renderizarLista($analisisList, $servicio, $tempDir, $contexto, $filtros);
 
         $zipName = $this->nombreZip($filtros);
         $zipPath = storage_path('app/' . uniqid() . '_' . $zipName);

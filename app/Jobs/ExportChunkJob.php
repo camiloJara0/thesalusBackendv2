@@ -48,7 +48,7 @@ class ExportChunkJob implements ShouldQueue
             Export::where('id', $this->exportId)->increment('completados', count($this->ids));
         } else {
             $contexto = $servicios->construirContexto($analisisList);
-            $servicios->renderizarLista($analisisList, $this->servicio, $directorio, $contexto);
+            $servicios->renderizarLista($analisisList, $this->servicio, $directorio, $contexto, $export->filtros);
             Export::where('id', $this->exportId)->increment('completados', $analisisList->count());
         }
 
