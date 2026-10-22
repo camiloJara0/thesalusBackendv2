@@ -292,18 +292,18 @@ class PdfExportService
     {
         $servicio = strtoupper($filtros['servicio'] ?? 'GENERAL');
 
-        if (!empty($filtros['id_paciente'])) {
-            $paciente = Paciente::with('infoUsuario')->find($filtros['id_paciente']);
-            $nombre = $paciente && $paciente->infoUsuario ? $paciente->infoUsuario->name : 'paciente';
-
-            return $servicio . '_PACIENTE_' . Str::slug($nombre, '_') . '.zip';
-        }
-
         if (!empty($filtros['id_profesional'])) {
             $profesional = Profesional::with('infoUsuario')->find($filtros['id_profesional']);
             $nombre = $profesional && $profesional->infoUsuario ? $profesional->infoUsuario->name : 'profesional';
 
             return $servicio . '_PROFESIONAL_' . Str::slug($nombre, '_') . '.zip';
+        }
+        
+        if (!empty($filtros['id_paciente'])) {
+            $paciente = Paciente::with('infoUsuario')->find($filtros['id_paciente']);
+            $nombre = $paciente && $paciente->infoUsuario ? $paciente->infoUsuario->name : 'paciente';
+
+            return $servicio . '_PACIENTE_' . Str::slug($nombre, '_') . '.zip';
         }
 
         return $servicio . '_GENERAL.zip';
