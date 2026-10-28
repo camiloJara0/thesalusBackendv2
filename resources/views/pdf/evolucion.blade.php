@@ -26,7 +26,7 @@ $signos = json_decode($examenFisico->signosVitales, true);
     }
 
     @page {
-        margin: 220px 35px 60px 35px;
+        margin: 190px 35px 60px 35px;
     }
 
     .pagenum:before {
@@ -86,10 +86,10 @@ $signos = json_decode($examenFisico->signosVitales, true);
 
     header {
         position: fixed;
-        top: -200px;
+        top: -170px;
         left: 0;
         right: 0;
-        height: 180px;
+        height: 150px;
     }
 
     .header-table {
@@ -255,14 +255,13 @@ $signos = json_decode($examenFisico->signosVitales, true);
 
 <body class="bodyPDF">
     <!-- ENCABEZADO -->
-
     <header>
 
         <table class="header-table">
 
             <tr class="header-top">
 
-                <td width="30%" class="logo-box">
+                <td width="22%" rowspan="2" class="logo-box">
 
                     @if($convenios && $convenios->logo && Storage::exists($convenios->logo))
                     <img src="{{ public_path('storage/'.$convenios->logo) }}" style="width:60px; height:auto;">
@@ -276,67 +275,77 @@ $signos = json_decode($examenFisico->signosVitales, true);
 
                 </td>
 
-                <td width="70%" style="padding:6px 6px 0px;text-align:center;">
+                <td width="53%" style="padding:6px 6px 0px;text-align:center;">
 
-                    <table class="table-sinBordes">
+                    <div class="header-title">
+                        HISTORIA CLÍNICA
+                    </div>
+
+                    <div class="header-subtitle">
+                        {{ strtoupper($analisis->servicio->name ?? $analisis->nombreServicio) }}
+                    </div>
+
+                </td>
+
+                <td width="25%" rowspan="2" class="document-box">
+
+                    <table class="table-sinBordes" style="width:100%;font-size: 11px;border-collapse:collapse;">
+
                         <tr>
-                            <td>
-                                Historia domiciliaria {{ strtoupper($analisis->servicio->name ?? $analisis->nombreServicio) }}
-                            </td>
-                            <td>
-                                Pagina <span class="pagenum"></span>
-                            </td>
+                            <td><strong>Código</strong></td>
+                            <td style="color: #000000;">HC-{{ $analisis->id }}</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                {{ $convenios->nombre ?? 'Santa Isabel IPS' }}
-                            </td>
-                            <td>
-                                <strong class="label">Historia clinica:</strong>
-                                HC-{{ $analisis->id }}
-                            </td>
+                            <td><strong>Versión</strong></td>
+                            <td style="color: #000000;">1.0</td>
                         </tr>
+
                         <tr>
-                            <td>
-                                <strong class="label">Telefono:</strong> 6024891626-3176689108-3176401540
-                            </td>
-                            <td>
-                                Email: <a class="label" href="mailto:CONTACTO@ICOMSALUDIPS.COM">CONTACTO@ICOMSALUDIPS.COM</a>
-                            </td>
+                            <td><strong>Fecha</strong></td>
+                            <td style="color: #000000;">{{ $analisis->created_at->format('Y-m-d') }}</td>
                         </tr>
+
                         <tr>
-                            <td><strong class="label">Identidicacion RC:</strong> {{ $paciente->name }}</td>
-                            <td><strong class="label">No. documento:</strong> {{ $paciente->No_document }}</td>
+                            <td><strong>Página</strong></td>
+                            <td style="color: #000000;"><span class="pagenum"></span></td>
                         </tr>
-                        <tr>
-                            <td>
-                                <strong class="label">Fecha de nacimiento:</strong> {{ $paciente->nacimiento }}
-                            </td>
-                            <td>
-                                <strong class="label">Edad:</strong> {{ \Carbon\Carbon::parse($paciente->nacimiento)->age }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <strong class="label">Sexo:</strong> {{ $paciente->sexo }}
-                            </td>
-                            <td>
-                                <strong class="label">Regimen:</strong>
-                                {{ $paciente->regimen ?? 'N/A' }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <strong class="label">Impreso por:</strong> {{ $paciente->sexo }}
-                            </td>
-                            <td>
-                                <strong class="label">Fecha de impresion:</strong>
-                                {{ $paciente->regimen ?? 'N/A' }}
-                            </td>
-                        </tr>
+
                     </table>
 
                 </td>
+
+            </tr>
+
+            <tr class="header-divider">
+
+                <td style="padding:4px 10px;">
+
+                    <table class="table-sinBordes" style="width:100%;border-collapse:collapse;font-size: 11px;">
+
+                        <tr>
+
+                            <td width="35%">
+                                <strong>Proceso:</strong>
+                                Atención Domiciliaria
+                            </td>
+
+                            <td width="35%">
+                                <strong>Documento:</strong>
+                                Registro Clínico
+                            </td>
+
+                            <td width="30%">
+                                <strong>Tipo:</strong>
+                                Evolución
+                            </td>
+
+                        </tr>
+
+                    </table>
+
+                </td>
+
             </tr>
         </table>
 
@@ -344,41 +353,24 @@ $signos = json_decode($examenFisico->signosVitales, true);
 
     <!-- DATOS DEL PACIENTE -->
     <table>
-
         <tr>
-            <td>
-                <strong class="label">Direccion:</strong> {{ $paciente->direccion }}
-            </td>
-            <td>
-                <strong class="label">Estado Civil:</strong>
-                {{ 'N/A' }}
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <strong class="label">Ciudad:</strong> {{ $paciente->municipio }}
-            </td>
-            <td>
-                <strong class="label">Barrio:</strong>
-                {{ $paciente->barrio ?? 'N/A' }}
-            </td>
-        </tr>
-        <tr>
-            <td><strong class="label">Nombre completo:</strong> {{ $paciente->name }}</td>
+            <td><strong>Nombre completo:</strong> {{ $paciente->name }}</td>
             <td></td>
         </tr>
         <tr>
             <td>
-                <strong class="label">EPS:</strong> {{ $paciente->Eps }}
+                <strong>No. documento:</strong> {{ $paciente->No_document }}<br />
+                <strong>Tipo de documento:</strong> {{ $paciente->type_doc }}
             </td>
             <td>
-                <strong class="label">Zona:</strong>
-                {{ $paciente->zona ?? 'N/A' }}
+                <strong>Edad:</strong> {{ \Carbon\Carbon::parse($paciente->nacimiento)->age }}<br />
+                <strong>Sexo:</strong> {{ $paciente->sexo }}
             </td>
         </tr>
-
         <tr>
-            <td></td>
+            <td colspan="2">
+                <strong>EPS:</strong> {{ $paciente->Eps }} | <strong>Zona:</strong> {{ $paciente->zona ?? 'N/A' }}
+            </td>
         </tr>
     </table>
 

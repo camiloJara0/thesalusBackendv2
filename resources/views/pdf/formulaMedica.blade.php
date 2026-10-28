@@ -1,322 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <title>FORMULA MEDICA</title>
     <style>
-    * {
-        box-sizing: border-box;
-    }
-
     body {
-        margin: 0;
-        padding: 0;
-        font-family: Calibri, Arial, Helvetica, sans-serif;
-        font-size: 14px;
-        color: #000000;
+        font-family: Arial, sans-serif;
+        color: #333;
     }
 
-    .bodyPDF {
-        font-family: Calibri, Arial, Helvetica, sans-serif;
-        color: #000000;
-        font-size: 14px;
-        line-height: 1.45;
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td,
+    th {
+        border: 1px solid #ddd;
+        padding: 5px;
+        font-size: 10px;
+    }
+
+    h3 {
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #000;
+        padding-bottom: 5px;
     }
 
     @page {
-        margin: 100px 80px 80px 35px;
+        margin: 140px 40px 60px 40px;
+    }
+
+    header {
+        position: fixed;
+        top: -120px;
+        left: 0;
+        right: 0;
+        height: 80px;
     }
 
     .pagenum:before {
         content: counter(page);
     }
-
-    /* =======================
-   TABLAS
-======================= */
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        border-spacing: 0;
-    }
-
-    th {
-        background: #e6e6e6;
-        color: #000000;
-        font-weight: bold;
-    }
-
-    th,
-    td {
-        border: 1px solid #cccccc;
-        padding: 7px;
-        vertical-align: top;
-        font-size: 14px;
-    }
-
-    /* =======================
-   TITULOS
-======================= */
-
-    h3 {
-        margin: 18px 0 8px;
-        padding: 7px 10px;
-
-        background: #f2f2f2;
-
-        color: #000000;
-
-        font-size: 11px;
-
-        border-left: 5px solid #404040;
-
-        border-bottom: none;
-
-        font-weight: bold;
-
-        letter-spacing: .3px;
-    }
-
-    /* =======================
-   HEADER
-======================= */
-
-    header {
-        position: fixed;
-        top: -170px;
-        left: 0;
-        right: 0;
-        height: 150px;
-    }
-
-    .header-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-family: Calibri, Arial, Helvetica, sans-serif;
-        font-size: 11px;
-        border: 1px solid #b3b3b3;
-    }
-
-    .header-top {
-        background: #d9d9d9;
-        color: #000000;
-    }
-
-    .header-title {
-        font-size: 11px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .header-subtitle {
-        font-size: 11px;
-        color: #000000;
-    }
-
-    .header-info {
-        font-size: 11px;
-        color: #000000;
-        line-height: 14px;
-    }
-
-    .logo-box {
-        text-align: center;
-        vertical-align: middle;
-        background: #ffffff;
-        border-right: 1px solid #d8d8d8;
-    }
-
-    .logo-box img {
-        width: 50px;
-    }
-
-    .company-name {
-        font-size: 18px;
-        font-weight: bold;
-        color: #000000;
-        margin-top: 3px;
-    }
-
-    .document-box {
-        background: #f5f5f5;
-        border-left: 1px solid #d8d8d8;
-        padding-left: 8px;
-    }
-
-    .document-box strong {
-        color: #000000;
-    }
-
-    .header-divider {
-        background: #ededed;
-        border-top: 1px solid #dddddd;
-    }
-
-    /* =======================
-   PACIENTE
-======================= */
-
-    .label {
-        font-weight: bold;
-        color: #000000;
-    }
-
-    .value {
-        color: #000000;
-    }
-
-    /* =======================
-   NOTA
-======================= */
-
-    .noteBox {
-        border: 1px solid #cccccc;
-        padding: 10px;
-        background: #fafafa;
-    }
-
-    .noteSection {
-        background: #ececec;
-        padding: 5px 8px;
-        font-weight: bold;
-        color: #000000;
-        border-left: 4px solid #404040;
-        margin-top: 8px;
-        margin-bottom: 5px;
-    }
-
-    .noteItem {
-        border-bottom: 1px solid #eeeeee;
-        padding: 4px 0;
-    }
-
-    .noteHour {
-        font-weight: bold;
-        color: #000000;
-        width: 55px;
-        display: inline-block;
-    }
-
-    .noteText {
-        color: #000000;
-    }
-
-    /* =======================
-   DIAGNOSTICOS
-======================= */
-
-    .diagHeader {
-        background: #f2f2f2;
-        color: #000000;
-    }
-
-    /* =======================
-   FIRMA
-======================= */
-
-    .signature {
-        margin-top: 35px;
-    }
-
-    .signature td {
-        height: 90px;
-    }
-
-    .signatureName {
-        font-weight: bold;
-        font-size: 11px;
-        color: #000000;
-    }
-
-    .signatureDoc {
-        font-size: 11px;
-        color: #000000;
-    }
-
-    /* =======================
-   HR
-======================= */
-
-    hr {
-        border: none;
-        border-top: 1px solid #dddddd;
-        margin: 6px 0;
-    }
-
-    .table-sinBordes tr, td {
-        border: none;
-    }
     </style>
 </head>
 
-<div>
+<body>
     <!-- ENCABEZADO -->
-    <p style="color: #000000; text-align: right; width: 100%;"><span class="pagenum"></span></p>
-    <div>
-        <div style="margin: 0 auto; text-align: center; width: 100%; ">
-            @if($convenios && $convenios->logo && Storage::exists($convenios->logo))
-            <img src="{{ public_path('storage/'.$convenios->logo) }}" style="width:180px; height:auto;">
-            @else
-            <img src="{{ public_path('logo.png') }}" style="width:180px; height:auto;">
-            @endif
-
-            <div class="company-name">
-                FORMULA MEDICA
-            </div>
-        </div>
-    </div>
+    <header>
+        <table style="width:100%; border-bottom:2px solid #000; font-size:12px;">
+            <tr>
+                <th style="width:20%; text-align:center;">
+                    @if($convenios && $convenios->logo && Storage::exists($convenios->logo))
+                        <img src="{{ public_path('storage/'.$convenios->logo) }}" style="width:60px; height:auto;" />
+                    @else
+                        <img src="{{ public_path('logo.png') }}" style="width:60px; height:auto;" />
+                    @endif
+                    <p><strong>{{ $convenios->nombre ?? 'Santa Isabel IPS' }}</strong></p>
+                </th>
+                <th style="width:50%; text-align:center; font-size:12px;">
+                    <p><strong>Proceso:</strong> Programa de Atención Domiciliaria</p>
+                    <p><strong>Registro {{ $analisis->servicio->name }}</strong></p>
+                    <p><strong>Formula Medica</strong></p>
+                </th>
+                <th style="width:30%; text-align:right; font-size:10px;">
+                    <p>Código:  </p>
+                    <p>Versión:  </p>
+                    <p>Fecha: {{ $analisis->created_at->format('Y-m-d') }}</p>
+                    <p>Página: <span class="pagenum"></span></p>
+                </th>
+            </tr>
+        </table>
+        <div style="height:30px;"></div>
+    </header>
 
     <!-- DATOS DEL PACIENTE -->
-    <table style="margin: 30px 160px 30px 120px;">
+    <h3>DATOS DEL PACIENTE</h3>
+    <table>
         <tr>
-            <td><strong>Fecha</strong> {{ \Carbon\Carbon::parse($analisis->created_at)->format('Y/m/d') ?? now()->format('Y-m-d') }}</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td><strong class="label"> Usuario (a): </strong> {{ $paciente->name }}</td>
+            <td><strong>Nombre completo:</strong> {{ $paciente->name }}</td>
             <td></td>
         </tr>
         <tr>
             <td>
-                <strong class="label">I.D. </strong> {{ $paciente->No_document }}<br />
+                <strong>No. documento:</strong> {{ $paciente->No_document }}<br />
+                <strong>Tipo de documento:</strong> {{ $paciente->type_doc }}
             </td>
             <td>
-                <strong class="label">Edad: </strong> {{ \Carbon\Carbon::parse($paciente->nacimiento)->age }}<br />
+                <strong>Edad:</strong> {{ \Carbon\Carbon::parse($paciente->nacimiento)->age }}<br />
+                <strong>Sexo:</strong> {{ $paciente->sexo }}
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <strong>EPS:</strong> {{ $paciente->Eps }} | <strong>Zona:</strong> {{ $paciente->zona ?? 'N/A' }}
             </td>
         </tr>
     </table>
 
-    <!-- Diagnosticos -->
-    <p style="margin: 0px 100px 30px 100px; width: 100%;">
-        @foreach($diagnosticos as $diagnostico)
-        <span>
-            {{ $diagnostico->descripcion }},
-        </span>
-        @endforeach
-    </p>
-
-    <!-- Medicamentos -->
-    <div style="margin: 0px 180px 30px 120px; width: 100%;">
-        @foreach($medicamentos as $medicamento)
-        <p> - 
-            <span >{{ $medicamento->medicamento }},</span>
-            <span >Dosis: {{ $medicamento->dosis }},</span>
-            <span >Cantidad: {{ $medicamento->cantidad }}</span>
-        </p>
-        @endforeach
-
+    <!-- DIAGNÓSTICOS -->
+    <div style="margin-bottom: 20px;">
+        <h3
+            style="font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 5px;">
+            FÓRMULA MEDICA
+        </h3>
+        <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+            <tr style="background-color: #f0f0f0;">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Nombre del medicamento</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left; width: 15%;">Dosis</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left; width: 15%;">Cantidad</th>
+            </tr>
+            @foreach($medicamentos as $medicamento)
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $medicamento->medicamento }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $medicamento->dosis }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ $medicamento->cantidad }}</td>
+            </tr>
+            @endforeach
+        </table>
     </div>
 
-    <p style="margin:60px 0px 0px 100px;">Fórmula válida por 90 dÌas</p>
     <!-- FIRMA Y SELLO -->
+    <table style="margin-top:40px;">
+        <tr>
+            <td style="text-align:center; border-top:1px solid #000;">
+                <p><strong>{{ $profesional->name }}</strong></p>
+                <p>{{ $profesional->No_document }}</p>
+            </td>
+            <td style="text-align:center; border-top:1px solid #000;">
+                @if($profesional->sello)
+                <img src="{{ public_path('storage/'.$profesional->sello) }}"
+                    style="width:100px; height:100px; object-fit:contain;" />
+                @else
+                <p>Firma y Sello</p>
+                @endif
+            </td>
+        </tr>
+    </table>
+</body>
 
-    <div style="margin-left: 20px;">
-        @if($profesional->sello)
-        <img src="{{ public_path('storage/'.$profesional->sello) }}"
-            style="width:100px; height:100px; object-fit:contain;" />
-        @else
-        <p>Firma y Sello:</p>
-        @endif
-    </div>
-</div>
+</html>

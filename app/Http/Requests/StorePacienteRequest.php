@@ -16,7 +16,7 @@ class StorePacienteRequest extends FormRequest
         return [
             'info_usuario.name' => 'required|string|max:255',
             'info_usuario.No_document' => 'required|integer',
-            'info_usuario.type_doc' => 'required|string|max:10',
+            'info_usuario.type_doc' => 'required|string|max:50',
             'info_usuario.celular' => 'required|integer',
             'info_usuario.telefono' => 'nullable|integer',
             'info_usuario.nacimiento' => 'required|date',
@@ -29,7 +29,7 @@ class StorePacienteRequest extends FormRequest
             'genero' => 'required|string|max:50',
             'sexo' => 'required|string|max:50',
             'regimen' => 'required|string|max:50',
-            'vulnerabilidad' => 'nullable|string|max:100',
+            'vulnerabilidad' => 'nullable|string|max:255',
         ];
     }
 
