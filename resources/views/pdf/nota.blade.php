@@ -113,7 +113,6 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
     .header-title {
         font-size: 11px;
         font-weight: bold;
-        text-transform: lowercase;
         letter-spacing: 0.5px;
     }
 
@@ -287,7 +286,7 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
                     </div>
 
                     <div class="header-subtitle">
-                        {{ strtoupper($analisis->nombreServicio) }}
+                        {{ strtoupper($analisis->servicio->name ?? $analisis->nombreServicio) }}
                     </div>
 
                 </td>
@@ -446,6 +445,7 @@ $agrupadoPorTipo = $descripcion->groupBy('tipo');
             </div>
         </div>
     </div>
+
 
 
     <!-- FIRMA Y SELLO -->

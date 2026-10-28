@@ -281,7 +281,7 @@ $signos = json_decode($examenFisico->signosVitales, true);
                     <table class="table-sinBordes">
                         <tr>
                             <td>
-                                Historia domiciliaria {{ strtoupper($analisis->nombreServicio) }}
+                                Historia domiciliaria {{ strtoupper($analisis->servicio->name ?? $analisis->nombreServicio) }}
                             </td>
                             <td>
                                 Pagina <span class="pagenum"></span>

@@ -282,7 +282,7 @@
                     </div>
 
                     <div class="header-subtitle">
-                        {{ strtoupper($analisis->nombreServicio) }}
+                        {{ strtoupper($analisis->servicio->name ?? $analisis->nombreServicio) }}
                     </div>
 
                 </td>
