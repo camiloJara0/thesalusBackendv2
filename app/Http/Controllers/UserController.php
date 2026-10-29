@@ -21,6 +21,7 @@ use App\Models\CodigoVerificacion;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Models\Profesional_has_permisos;
+use App\Models\Profesional;
 use App\Models\Empresa;
 
 
@@ -315,6 +316,46 @@ class UserController extends Controller
 
     }
 
+    public function miPerfil(Request $request)
+    {
+        $user = $request->user();
+
+        $infoUsuario = InformacionUser::find($user->id_infoUsuario);
+
+        if (!$infoUsuario) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Información de usuario no encontrada.',
+            ], 404);
+        }
+
+        $respuesta = [
+            'success' => true,
+            'rol' => $user->rol,
+            'correo' => $user->correo,
+            'usuario' => $infoUsuario->toArray(),
+            'profesional' => null,
+        ];
+
+        if ($user->rol === 'Profesional') {
+            $profesional = Profesional::with([
+                'infoUsuario',
+                'profesion',
+                'user:id_infoUsuario,correo',
+            ])
+                ->where('id_infoUsuario', $user->id_infoUsuario)
+                ->first();
+
+            $respuesta['profesional'] = $profesional ? $profesional->toArray() : null;
+
+            if ($profesional && $profesional->infoUsuario) {
+                $respuesta['usuario'] = $profesional->infoUsuario->toArray();
+            }
+        }
+
+        return response()->json($respuesta, 200);
+    }
+
     public function verificacion(RecuperarContrasenaRequest $request)
     {
 
@@ -419,6 +460,18 @@ class UserController extends Controller
             'message' => 'Usuario ya tiene contraseña registrada.'
         ]);
 
+    }
+
+    public function logout(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sesión cerrada exitosamente.'
+        ]);
     }
 
 }

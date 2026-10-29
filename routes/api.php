@@ -129,7 +129,6 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::get('/v1/filtrosCitas', [CitaController::class, 'filtrosCitas']);
         Route::post('/v1/variasCitas', [CitaController::class, 'variasCitas']);
 
-
         Route::get('/v1/analisisInicial', [HistoriaClinicaController::class, 'analisisInicial']);
         Route::post('/v1/analisisPaciente', [HistoriaClinicaController::class, 'analisisPaciente']);
         Route::post('/v1/analisisPaginado', [HistoriaClinicaController::class, 'analisisPaginado']);
@@ -140,11 +139,13 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::get('/v1/administradores', [UserController::class, 'administradores']);
         Route::get('/v1/secciones', [SeccionesController::class, 'index']);
         Route::get('/v1/dashboard', [DashboardController::class, 'dashboard']);
+        Route::post('/v1/logout', [UserController::class, 'logout'])->middleware('throttle:3,1');
 
         // Traer grupos de tablas
         Route::get('/v1/traeDatosHistoria', [HistoriaClinicaController::class, 'traeDatosHistoria']);
         Route::post('/v1/pacientesConHistoria', [HistoriaClinicaController::class, 'pacientesConHistoria']);
         Route::get('/v1/traeDatosPlanManejo', [HistoriaClinicaController::class, 'traeDatosPlanManejo']);
+        Route::get('/v1/miPerfil', [UserController::class, 'miPerfil']);
         Route::post('/v1/traePacientes', [PacienteController::class, 'traePacientes']);
         Route::get('/v1/pacientesInactivos', [PacienteController::class, 'pacientesInactivos']);
         Route::get('/v1/traeKardex', [PacienteController::class, 'traeKardex']);
