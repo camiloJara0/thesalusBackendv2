@@ -154,6 +154,7 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
 
         // Generacion de PDF
         Route::post('/v1/exportarPdf', [HistoriaClinicaController::class, 'exportarPdf']);
+        Route::get('/exportaciones/capacidad', [HistoriaClinicaController::class, 'capacidadExport']);
         Route::post('/v1/exportar/async', [HistoriaClinicaController::class, 'exportarPdfAsync']);
         Route::get('/v1/exportar/{id}/estado', [HistoriaClinicaController::class, 'estadoExport']);
         Route::get('/v1/exportar/{id}/descarga', [HistoriaClinicaController::class, 'descargarExport']);

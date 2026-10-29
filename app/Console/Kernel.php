@@ -20,6 +20,9 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping();
 
         $schedule->command('exports:prune')->daily();
+
+        // Libera cupos si un worker murio sin finalizar exportaciones
+        $schedule->command('exports:reap')->everyFifteenMinutes();
     }
 
     /**

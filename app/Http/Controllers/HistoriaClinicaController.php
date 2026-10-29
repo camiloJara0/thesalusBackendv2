@@ -28,6 +28,7 @@ use App\Models\Profesional;
 use App\Models\Export;
 use App\Jobs\ExportZipJob;
 use App\Services\PdfExportService;
+use App\Services\ExportConcurrencyService;
 
 use ZipArchive;
 use Illuminate\Support\Facades\File;
@@ -1485,8 +1486,9 @@ class HistoriaClinicaController extends Controller
         ]);
 
         $servicioExport = app(PdfExportService::class);
+        $concurrencia = app(ExportConcurrencyService::class);
 
-        $export = Export::create([
+        $resultado = $concurrencia->crear([
             'user_id' => $request->user()?->id,
             'servicio' => $servicio,
             'filtros' => $filtros,
@@ -1496,12 +1498,29 @@ class HistoriaClinicaController extends Controller
             'zip_name' => $servicioExport->nombreZip($filtros),
         ]);
 
-        ExportZipJob::dispatch($export->id);
+        if (!$resultado['export']) {
+            return response()->json([
+                'success' => false,
+                'code' => 'EXPORT_LIMIT_REACHED',
+                'message' => "Actualmente existen {$resultado['active']} exportaciones en proceso. Intente nuevamente en unos minutos.",
+                'active_exports' => $resultado['active'],
+                'max_exports' => $resultado['max'],
+            ], 429);
+        }
+
+        ExportZipJob::dispatch($resultado['export']->id);
 
         return response()->json([
             'success' => true,
-            'export_id' => $export->id,
+            'export_id' => $resultado['export']->id,
         ], 202);
+    }
+
+    public function capacidadExport()
+    {
+        return response()->json(
+            app(ExportConcurrencyService::class)->capacidad()
+        );
     }
 
     public function estadoExport(Request $request, $id)
