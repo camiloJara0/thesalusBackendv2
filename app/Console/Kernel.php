@@ -15,7 +15,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('queue:work database --stop-when-empty --tries=2 --timeout=600')
+        $schedule->command('queue:work database --stop-when-empty --tries=2 --timeout=180')
             ->everyMinute()
             ->withoutOverlapping();
 
