@@ -126,6 +126,39 @@ class HistoriaClinicaController extends Controller
         ]);
     }
 
+    public function analisisCompleta($id)
+    {
+        $analisis = Analisis::with([
+            'servicio',
+            'diagnosticos',
+            'diagnosticosCIF',
+            'enfermedad',
+            'examenFisico',
+            'medicamentos',
+            'procedimientos',
+            'nota.descripcionNota',
+            'terapia',
+            'cita',
+            'profesional.infoUsuario',
+            'historia.paciente.infoUsuario',
+            'historia.paciente.eps',
+            'historia.paciente.antecedente',
+            'historia.paciente.convenios',
+        ])->find($id);
+
+        if (!$analisis) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Registro clinico no encontrado',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $analisis,
+        ]);
+    }
+
     public function analisisPaciente(Request $request)
     {
         $servicios = ['Nota', 'Medicina', 'Terapia', 'Evolucion', 'Trabajo Social'];

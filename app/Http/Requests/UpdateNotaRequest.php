@@ -17,7 +17,7 @@ class UpdateNotaRequest extends FormRequest
             'id' => 'required|exists:notas,id',
             'direccion' => 'required|string|max:255',
             'fecha_nota' => 'required|date',
-            'hora_nota' => 'required|date_format:H:i',
+            'hora_nota' => 'required',
             'tipoAnalisis' => 'nullable|string|max:100',
         ];
     }

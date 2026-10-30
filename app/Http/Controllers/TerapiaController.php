@@ -90,7 +90,7 @@ class TerapiaController extends Controller
                 Cita::where('id', $data['Cita']['id'] ?? null)
                     ->update([
                         'estado' => 'Realizada',
-                        'id_analisis' => null
+                        'id_analisis' => $analisis->id
                     ]);
             }
 

@@ -72,4 +72,14 @@ class Analisis extends Model
     {
         return $this->hasOne(Terapia::class, 'id_analisis');
     }
+
+    public function cita()
+    {
+        return $this->hasOne(Cita::class, 'id_analisis');
+    }
+
+    public function diagnosticosCIF()
+    {
+        return $this->hasMany(Diagnostico_relacionado::class, 'id_analisis');
+    }
 }

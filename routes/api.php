@@ -131,6 +131,7 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
 
         Route::get('/v1/analisisInicial', [HistoriaClinicaController::class, 'analisisInicial']);
         Route::post('/v1/analisisPaciente', [HistoriaClinicaController::class, 'analisisPaciente']);
+        Route::get('/v1/analisis/{id}/completa', [HistoriaClinicaController::class, 'analisisCompleta']);
         Route::post('/v1/analisisPaginado', [HistoriaClinicaController::class, 'analisisPaginado']);
         Route::post('/v1/analisisFiltrado', [HistoriaClinicaController::class, 'analisisFiltrado']);
         Route::get('/v1/filtrosAnalisis', [HistoriaClinicaController::class, 'filtrosAnalisis']);
