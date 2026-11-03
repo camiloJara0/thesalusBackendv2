@@ -21,7 +21,7 @@ class CitaController extends Controller
      */
     public function index()
     {
-        $cita = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio', 'analisis'])->get();
+        $cita = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio', 'analisis'])->orderBy('id', 'desc')->limit(200)->get();
 
         return response()->json([
             'success' => true,
@@ -85,6 +85,7 @@ class CitaController extends Controller
 
         $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
             ->whereBetween('fecha', [$inicio, $fin])
+            ->limit(200)
             ->get();
 
         return response()->json(['success' => true, 'data' => $citas]);
