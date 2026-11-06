@@ -88,10 +88,14 @@ class CitaController extends Controller
 
     public function citasPorRango(Request $request)
     {
+        $authUser = Auth::user();
         $inicio = $request->input('inicio'); // ej: 2026-03-01
         $fin = $request->input('fin');       // ej: 2026-03-31
 
+        $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
+
         $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
+            ->where('id_medico', $profesional->id)
             ->whereBetween('fecha', [$inicio, $fin])
             ->limit(500)
             ->get();
