@@ -92,13 +92,21 @@ class CitaController extends Controller
         $inicio = $request->input('inicio'); // ej: 2026-03-01
         $fin = $request->input('fin');       // ej: 2026-03-31
 
-        $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
+        $citas;
+        if ($authUser->rol == 'Profesional'){
+            $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
 
-        $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
-            ->where('id_medico', $profesional->id)
-            ->whereBetween('fecha', [$inicio, $fin])
-            ->limit(500)
-            ->get();
+            $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
+                ->where('id_medico', $profesional->id)
+                ->whereBetween('fecha', [$inicio, $fin])
+                ->limit(500)
+                ->get();
+        } else {
+            $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
+                ->whereBetween('fecha', [$inicio, $fin])
+                ->limit(500)
+                ->get();
+        }
 
         return response()->json(['success' => true, 'data' => $citas]);
     }
