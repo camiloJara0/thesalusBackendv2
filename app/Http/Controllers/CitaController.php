@@ -32,35 +32,43 @@ class CitaController extends Controller
     public function infoCitas()
     {
         $authUser = Auth::user();
-        if ($authUser->rol !== 'Profesional') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Acceso denegado. Solo los profesionales pueden acceder a esta información.'
-            ], 403);
+
+        $citasTotal;
+        $citasPendientes;
+        $citasVencidas;
+        $citasRealizadas;
+
+        if ($authUser->rol !== 'Profesional') { 
+            $citasTotal = Cita::get()->count();
+            $citasPendientes = Cita::where('estado', 'inactiva')->get()->count();
+            $citasVencidas = Cita::where('estado', 'inactiva')
+                ->whereRaw('COALESCE(fechaHasta, fecha) < ?', [now()->toDateString()])
+                ->count();
+            $citasRealizadas = Cita::where('estado', 'Realizada')->count();
+
+        } else {
+            // profesional
+            $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
+
+            $citasTotal = Cita::where('id_medico', $profesional->id)
+                ->get()->count();
+            $citasPendientes = Cita::where('id_medico', $profesional->id)
+                ->where('estado', 'inactiva')
+                ->get()->count();
+            $citasVencidas = Cita::where('id_medico', $profesional->id)->where('estado', 'inactiva')
+                ->whereRaw('COALESCE(fechaHasta, fecha) < ?', [now()->toDateString()])
+                ->count();
+            $citasRealizadas = Cita::where('id_medico', $profesional->id)->where('estado', 'Realizada')->count();
         }
 
-        $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
-
-        // Citas por profesional
-        $citasPorProfesional = Cita::where('id_medico', $profesional->id)
-            ->get()->count();
-        $citasPendientes = Cita::where('id_medico', $profesional->id)
-            ->where('estado', 'inactiva')
-            ->get()->count();
-
-        // Citas vencidas y canceladas
-        $citasVencidas = Cita::where('estado', 'inactiva')
-            ->whereRaw('COALESCE(fechaHasta, fecha) < ?', [now()->toDateString()])
-            ->count();
-        $citasrealizadas = Cita::where('estado', 'Realizada')->count();
 
         return response()->json([
             'success' => true,
             'data' => [
-                'citas_total' => $citasPorProfesional,
+                'citas_total' => $citasTotal,
                 'citas_vencidas' => $citasVencidas,
                 'citas_pendientes' => $citasPendientes,
-                'citas_realizadas' => $citasrealizadas,
+                'citas_realizadas' => $citasRealizadas,
             ]
         ]);
     }
@@ -85,7 +93,7 @@ class CitaController extends Controller
 
         $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
             ->whereBetween('fecha', [$inicio, $fin])
-            ->limit(200)
+            ->limit(500)
             ->get();
 
         return response()->json(['success' => true, 'data' => $citas]);
