@@ -43,6 +43,11 @@ class PdfExportService
             $query->whereHas('servicio', function ($q) use ($servicio) {
                 $q->where('plantilla', $servicio);
             });
+        } else {
+            // Sin filtro de servicio: todos los servicios con plantilla exportable
+            $query->whereHas('servicio', function ($q) {
+                $q->whereIn('plantilla', self::SERVICIOS);
+            });
         }
 
         if ($servicio === 'Nota') {
@@ -261,12 +266,16 @@ class PdfExportService
         }
     }
 
-    public function renderizarLista($analisisList, string $servicio, string $directorio, array $contexto, array $filtros): array
+    public function renderizarLista($analisisList, ?string $servicio, string $directorio, array $contexto, array $filtros): array
     {
         $pdfFiles = [];
 
         foreach ($analisisList as $analisis) {
-            $datos = $this->datosParaVista($analisis, $contexto, $servicio);
+            // Servicio del propio registro: permite exportaciones mezcladas
+            // cuando no se filtra por servicio. Fallback al filtro global.
+            $servicioItem = $analisis->servicio->plantilla ?: ($servicio ?: 'REGISTRO');
+
+            $datos = $this->datosParaVista($analisis, $contexto, $servicioItem);
 
             if ($datos === null) {
                 continue;
@@ -276,13 +285,13 @@ class PdfExportService
 
             $pdfName = '';
             if (!empty($filtros['id_profesional'])) {
-                $nombreProfesional = $datos['data']['profesional']->name ?? 'profesional';
-                $pdfName = sprintf('%s_%s_%s_%s.pdf', strtoupper($servicio), $analisis->id, $nombreProfesional, Carbon::parse($analisis->created_at)->format('Ymd'));
+                $nombreProfesional = $this->nombreArchivoSeguro($datos['data']['profesional']->name ?? '', 'profesional');
+                $pdfName = sprintf('%s_%s_%s_%s.pdf', strtoupper($servicioItem), $analisis->id, $nombreProfesional, Carbon::parse($analisis->created_at)->format('Ymd'));
             } else if (!empty($filtros['id_paciente'])) {
-                $nombrePaciente = $datos['data']['paciente']->name ?? 'paciente';
-                $pdfName = sprintf('%s_%s_%s_%s.pdf', strtoupper($servicio), $analisis->id, $nombrePaciente, Carbon::parse($analisis->created_at)->format('Ymd'));
+                $nombrePaciente = $this->nombreArchivoSeguro($datos['data']['paciente']->name ?? '', 'paciente');
+                $pdfName = sprintf('%s_%s_%s_%s.pdf', strtoupper($servicioItem), $analisis->id, $nombrePaciente, Carbon::parse($analisis->created_at)->format('Ymd'));
             } else {
-                $pdfName = sprintf('%s_%s_%s.pdf', strtoupper($servicio), $analisis->id, Carbon::parse($analisis->created_at)->format('Ymd'));
+                $pdfName = sprintf('%s_%s_%s.pdf', strtoupper($servicioItem), $analisis->id, Carbon::parse($analisis->created_at)->format('Ymd'));
             }
 
             $pdfPath = $directorio . '/' . $pdfName;
@@ -298,9 +307,26 @@ class PdfExportService
         return $pdfFiles;
     }
 
+    /**
+     * Convierte un nombre en un segmento apto para nombre de archivo.
+     * Elimina caracteres inválidos en Windows (/, \, :, *, ?, ", <, >, |),
+     * acentos, espacios repetidos y limita el largo, para que
+     * file_put_contents no falle al escribir el PDF.
+     */
+    private function nombreArchivoSeguro(?string $nombre, string $respaldo): string
+    {
+        $limpio = Str::slug(trim((string) $nombre), '_');
+
+        if ($limpio === '') {
+            return $respaldo;
+        }
+
+        return Str::limit($limpio, 60, '');
+    }
+
     public function nombreZip(array $filtros): string
     {
-        $servicio = strtoupper($filtros['servicio'] ?? 'GENERAL');
+        $servicio = strtoupper(!empty($filtros['servicio']) ? $filtros['servicio'] : 'GENERAL');
 
         if (!empty($filtros['id_profesional'])) {
             $profesional = Profesional::with('infoUsuario')->find($filtros['id_profesional']);
@@ -354,7 +380,8 @@ class PdfExportService
     {
         $servicio = $filtros['servicio'] ?? null;
 
-        if (!in_array($servicio, self::SERVICIOS, true)) {
+        // Servicio vacío/null = exportar todos los servicios; si se envía, debe ser válido
+        if (!empty($servicio) && !in_array($servicio, self::SERVICIOS, true)) {
             return ['error' => 'Servicio no válido'];
         }
 

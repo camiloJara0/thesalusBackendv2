@@ -1502,9 +1502,10 @@ class HistoriaClinicaController extends Controller
 
     public function exportarPdfAsync(Request $request)
     {
-        $servicio = $request->servicio;
+        // Vacío = todos los servicios; si se envía, debe ser uno válido
+        $servicio = $request->servicio ?: '';
 
-        if (!in_array($servicio, PdfExportService::SERVICIOS, true)) {
+        if ($servicio !== '' && !in_array($servicio, PdfExportService::SERVICIOS, true)) {
             return response()->json([
                 'error' => 'Servicio no válido',
             ], 400);
@@ -1618,9 +1619,10 @@ class HistoriaClinicaController extends Controller
 
     public function exportarExcel(Request $request)
     {
-        $servicio = $request->servicio;
+        // Vacío = todos los servicios; si se envía, debe ser uno válido
+        $servicio = $request->servicio ?: '';
 
-        if (!in_array($servicio, PdfExportService::SERVICIOS, true)) {
+        if ($servicio !== '' && !in_array($servicio, PdfExportService::SERVICIOS, true)) {
             return response()->json([
                 'error' => 'Servicio no válido',
             ], 400);

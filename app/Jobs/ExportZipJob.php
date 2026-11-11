@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 
 class ExportZipJob implements ShouldQueue
 {
@@ -37,6 +38,13 @@ class ExportZipJob implements ShouldQueue
         $total = count($ids);
 
         if ($total === 0) {
+            // No es un error: la consulta simplemente no tiene ítems que exportar
+            Log::info('Exportación sin ítems: la consulta no tiene registros para exportar', [
+                'export_id' => $export->id,
+                'servicio' => $export->servicio,
+                'filtros' => $export->filtros,
+            ]);
+
             $export->update(['estado' => 'fallida', 'total' => 0]);
 
             return;
