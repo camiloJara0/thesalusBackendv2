@@ -45,7 +45,7 @@ class ExportZipJob implements ShouldQueue
                 'filtros' => $export->filtros,
             ]);
 
-            $export->update(['estado' => 'fallida', 'total' => 0]);
+            $export->update(['estado' => 'vacia', 'total' => 0]);
 
             return;
         }
