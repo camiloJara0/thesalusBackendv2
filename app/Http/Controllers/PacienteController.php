@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Paciente;
+use App\Models\Profesional;
+use App\Models\Profesion_has_permisos;
 use App\Models\InformacionUser;
 use App\Models\Eps;
 use App\Models\Plan_manejo_procedimiento;
@@ -13,6 +15,7 @@ use App\Http\Requests\StorePacienteRequest;
 use App\Http\Requests\UpdatePacienteRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 
@@ -25,13 +28,35 @@ class PacienteController extends Controller
      */
     public function index()
     {
-        $paciente = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
-        foreach ($paciente as $p) {
+        $authUser = Auth::user();
+        
+        if($authUser->rol == 'Admin'){
+            $pacientes = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
+
+            } else {
+
+                $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
+                $filtrar = Profesion_has_permisos::where('id_profesion', $profesional->id_profesion)->where('id_seccion', 76)->first();
+
+                if ($filtrar) {
+                    $pacientes = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
+
+                } else {
+                    $pacientes = Paciente::with(['infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos'])
+                        ->where('estado', 1)
+                        ->whereHas('citas', function ($query) use ($profesional) {
+                            $query->where('id_medico', $profesional->id);
+                        })
+                        ->get();
+                }
+        }
+
+        foreach ($pacientes as $p) {
             $convenio = $p->convenios->first(); // devuelve el primer convenio o null
         }
         return response()->json([
             'success' => true,
-            'data' => $paciente
+            'data' => $pacientes
         ], 200);
     }
 
@@ -49,12 +74,34 @@ class PacienteController extends Controller
 
     public function traePacientes(Request $request)
     {
-        $pacientes = Paciente::with(['infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos'])
-            ->where('estado', 1)
-            ->whereHas('citas', function ($query) use ($request) {
-                $query->where('id_medico', $request->id_profesional);
-            })
-            ->get();
+        $authUser = Auth::user();
+        if(!$authUser) {
+           return response()->json([
+            'message' => 'no se econtro usuario'
+           ]);
+        };
+        $pacientes;
+        
+        if($authUser->rol !== 'Profesional'){
+            $pacientes = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
+
+            } else {
+                $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
+                $filtrar = Profesion_has_permisos::where('id_profesion', $profesional->id_profesion)->where('id_seccion', 76)->first();
+
+                if ($filtrar) {
+                    $pacientes = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
+
+                } else {
+                    $pacientes = Paciente::with(['infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos'])
+                        ->where('estado', 1)
+                        ->whereHas('citas', function ($query) use ($profesional) {
+                            $query->where('id_medico', $profesional->id);
+                        })
+                        ->get();
+                }
+        }
+
         foreach ($pacientes as $p) {
             $convenio = $p->convenios->first(); // devuelve el primer convenio o null
         }

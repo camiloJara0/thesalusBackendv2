@@ -223,6 +223,11 @@ class UserController extends Controller
             ], 403);
         }
 
+        $user->tokens()
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->delete();
+
         $tokenResult = $user->createToken('auth_token');
         
         // Establece la expiración
