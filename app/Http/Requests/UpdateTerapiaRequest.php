@@ -17,7 +17,7 @@ class UpdateTerapiaRequest extends FormRequest
             'id' => 'required|exists:terapia,id',
             'objetivos' => 'required|string',
             'fecha' => 'required|date',
-            'hora' => 'required|date_format:H:i',
+            'hora' => 'required',
             'sesion' => 'nullable|integer|min:1',
             'evolucion' => 'nullable|string',
         ];
