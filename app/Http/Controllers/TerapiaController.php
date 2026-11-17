@@ -13,6 +13,7 @@ use App\Http\Requests\StoreTerapiaRequest;
 use App\Http\Requests\UpdateTerapiaRequest;
 
 use Illuminate\Http\Request;
+use App\Support\Acceso;
 
 class TerapiaController extends Controller
 {
@@ -23,7 +24,20 @@ class TerapiaController extends Controller
      */
     public function index()
     {
-        $terapia = Terapia::get();
+        $query = Terapia::query();
+
+        if (!Acceso::puedeVerTodosPacientes()) {
+            $idMedico = Acceso::idProfesional();
+            $query->whereIn('id_analisis', function ($sub) use ($idMedico) {
+                $sub->select('analises.id')
+                    ->from('analises')
+                    ->join('historia__clinicas', 'analises.id_historia', '=', 'historia__clinicas.id')
+                    ->join('citas', 'citas.id_paciente', '=', 'historia__clinicas.id_paciente')
+                    ->where('citas.id_medico', $idMedico);
+            });
+        }
+
+        $terapia = $query->get();
 
         return response()->json([
             'success' => true,
@@ -118,6 +132,13 @@ class TerapiaController extends Controller
      */
     public function show(Terapia $terapia)
     {
+        if (!Acceso::puedeVerAnalisis((int) $terapia->id_analisis)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este registro',
+            ], 403);
+        }
+
         return $terapia;
     }
 
@@ -197,6 +218,13 @@ class TerapiaController extends Controller
 
     public function imprimir($id)
     {
+        if (!Acceso::puedeVerAnalisis((int) $id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este registro',
+            ], 403);
+        }
+
         $terapia = Terapia::where('id_analisis', $id)->first();
 
         $analisis = DB::table('analises')

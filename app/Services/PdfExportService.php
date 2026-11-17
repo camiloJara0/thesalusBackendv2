@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\Analisis;
 use App\Models\Paciente;
 use App\Models\Profesional;
+use App\Support\Acceso;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -77,6 +79,10 @@ class PdfExportService
             $query->whereHas('historia', function ($q) use ($idPaciente) {
                 $q->where('id_paciente', $idPaciente);
             });
+        }
+
+        if (Auth::check()) {
+            Acceso::scopeAnalisis($query);
         }
 
         return $query;

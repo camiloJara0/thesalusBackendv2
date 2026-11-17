@@ -29,6 +29,7 @@ use App\Models\Export;
 use App\Jobs\ExportZipJob;
 use App\Services\PdfExportService;
 use App\Services\ExportConcurrencyService;
+use App\Support\Acceso;
 
 use ZipArchive;
 use Illuminate\Support\Facades\File;
@@ -46,10 +47,11 @@ class HistoriaClinicaController extends Controller
 
     public function index()
     {
-        $pacientes = Paciente::with('infoUsuario')
+        $query = Paciente::with('infoUsuario')
             ->where('estado', 1)
-            ->withExists('historiaClinica')
-            ->get();
+            ->withExists('historiaClinica');
+        Acceso::scopePacientes($query);
+        $pacientes = $query->get();
 
         $data = $pacientes->map(function ($paciente) {
             return [
@@ -69,10 +71,12 @@ class HistoriaClinicaController extends Controller
     public function pacientesConHistoria(Request $request)
     {
 
+        $idMedico = Acceso::esProfesional() ? Acceso::idProfesional() : $request->id_profesional;
+
         $pacientes = Paciente::with(['infoUsuario'])
             ->where('estado', 1)
-            ->whereHas('citas', function ($query) use ($request) {
-                $query->where('id_medico', $request->id_profesional);
+            ->whereHas('citas', function ($query) use ($idMedico) {
+                $query->where('id_medico', $idMedico);
             })
             ->withExists('historiaClinica')
             ->get();
@@ -94,7 +98,9 @@ class HistoriaClinicaController extends Controller
 
     public function traeDatosHistoria()
     {
-        $analisis = Analisis::with('servicio', 'historia', 'diagnosticos', 'enfermedad', 'examenFisico', 'medicamentos', 'procedimientos', 'nota.descripcionNota', 'terapia', 'profesional.infoUsuario')->get();
+        $query = Analisis::with('servicio', 'historia', 'diagnosticos', 'enfermedad', 'examenFisico', 'medicamentos', 'procedimientos', 'nota.descripcionNota', 'terapia', 'profesional.infoUsuario');
+        Acceso::scopeAnalisis($query);
+        $analisis = $query->get();
 
         return response()->json([
             'success' => true,
@@ -104,7 +110,7 @@ class HistoriaClinicaController extends Controller
 
     public function analisisInicial()
     {
-        $analisis = Analisis::with(
+        $query = Analisis::with(
             'servicio',
             'historia',
             'diagnosticos',
@@ -117,8 +123,11 @@ class HistoriaClinicaController extends Controller
             'profesional.infoUsuario'
         )
         ->orderBy('id', 'desc')
-        ->limit(200)
-        ->get();
+        ->limit(200);
+
+        Acceso::scopeAnalisis($query);
+
+        $analisis = $query->get();
 
         return response()->json([
             'success' => true,
@@ -153,6 +162,13 @@ class HistoriaClinicaController extends Controller
             ], 404);
         }
 
+        if (!Acceso::puedeVerAnalisis((int) $id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este registro clinico',
+            ], 403);
+        }
+
         return response()->json([
             'success' => true,
             'data' => $analisis,
@@ -161,6 +177,13 @@ class HistoriaClinicaController extends Controller
 
     public function analisisPaciente(Request $request)
     {
+        if ($request->filled('id') && !Acceso::puedeVerPaciente((int) $request->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este paciente',
+            ], 403);
+        }
+
         $servicios = ['Nota', 'Medicina', 'Terapia', 'Evolucion', 'Trabajo Social'];
 
         $data = [];
@@ -202,6 +225,13 @@ class HistoriaClinicaController extends Controller
         $servicio  = $request->input('servicio');
         $paciente  = $request->input('paciente_id');
 
+        if (!empty($paciente) && !Acceso::puedeVerPaciente((int) $paciente)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este paciente',
+            ], 403);
+        }
+
         $query = Analisis::with(
             'servicio',
             'historia',
@@ -214,6 +244,8 @@ class HistoriaClinicaController extends Controller
             'terapia',
             'profesional.infoUsuario'
         );
+
+        Acceso::scopeAnalisis($query);
 
         if ($servicio) {
             $query->whereHas('servicio', function ($q) use ($servicio) {
@@ -244,6 +276,13 @@ class HistoriaClinicaController extends Controller
 
     public function analisisFiltrado(Request $request)
     {
+        if ($request->filled('paciente_id') && !Acceso::puedeVerPaciente((int) $request->paciente_id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este paciente',
+            ], 403);
+        }
+
         $query = Analisis::with(
             'servicio',
             'historia',
@@ -256,6 +295,8 @@ class HistoriaClinicaController extends Controller
             'terapia',
             'profesional.infoUsuario'
         );
+
+        Acceso::scopeAnalisis($query);
 
         if ($request->filled('paciente_id')) {
             $query->whereHas('historia', function ($q) use ($request) {
@@ -901,6 +942,14 @@ class HistoriaClinicaController extends Controller
     {
         $analisis = Analisis::with('servicio')->find($id);
 
+        if (!$analisis) {
+            return response()->json(['success' => false, 'message' => 'Registro clinico no encontrado'], 404);
+        }
+
+        if (!Acceso::puedeVerAnalisis((int) $analisis->id)) {
+            return response()->json(['success' => false, 'message' => 'No autorizado para acceder a este registro clinico'], 403);
+        }
+
         $historia = Historia_Clinica::where('id', $analisis->id_historia)->first();
 
         // Paciente con su información de usuario
@@ -974,6 +1023,14 @@ class HistoriaClinicaController extends Controller
     {
         $analisis = Analisis::with('servicio')->find($id);
 
+        if (!$analisis) {
+            return response()->json(['success' => false, 'message' => 'Registro clinico no encontrado'], 404);
+        }
+
+        if (!Acceso::puedeVerAnalisis((int) $analisis->id)) {
+            return response()->json(['success' => false, 'message' => 'No autorizado para acceder a este registro clinico'], 403);
+        }
+
         $historia = Historia_Clinica::where('id', $analisis->id_historia)->first();
 
         // Paciente con su información de usuario
@@ -1042,6 +1099,14 @@ class HistoriaClinicaController extends Controller
     public function imprimirMedicina($id)
     {
         $analisis = Analisis::with('servicio')->find($id);
+
+        if (!$analisis) {
+            return response()->json(['success' => false, 'message' => 'Registro clinico no encontrado'], 404);
+        }
+
+        if (!Acceso::puedeVerAnalisis((int) $analisis->id)) {
+            return response()->json(['success' => false, 'message' => 'No autorizado para acceder a este registro clinico'], 403);
+        }
 
         $historia = Historia_Clinica::where('id', $analisis->id_historia)->first();
 
@@ -1145,6 +1210,18 @@ class HistoriaClinicaController extends Controller
         $idProfesional = $request->id_profesional;
         $servicio = $request->servicio;
 
+        if (!Acceso::puedeVerTodosPacientes()) {
+            if (!empty($idPaciente) && !Acceso::puedeVerPaciente((int) $idPaciente)) {
+                return response()->json(['success' => false, 'message' => 'No autorizado para exportar este paciente'], 403);
+            }
+
+            $idProfesional = Acceso::idProfesional();
+
+            if ($idProfesional === null) {
+                return response()->json(['success' => false, 'message' => 'No autorizado para exportar'], 403);
+            }
+        }
+
         $query = Analisis::with(
             'servicio',
             'historia',
@@ -1157,6 +1234,8 @@ class HistoriaClinicaController extends Controller
             'terapia',
             'profesional.infoUsuario'
         );
+
+        Acceso::scopeAnalisis($query);
 
         // Filtro por fecha
         $query->whereBetween('created_at', [
@@ -1464,13 +1543,20 @@ class HistoriaClinicaController extends Controller
 
     public function exportarPdf(Request $request)
     {
-        $filtros = $request->only([
+        $filtros = Acceso::sanitizarFiltrosExport($request->only([
             'fechaInicio',
             'fechaFin',
             'id_paciente',
             'id_profesional',
             'servicio',
-        ]);
+        ]));
+
+        if ($filtros === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para exportar',
+            ], 403);
+        }
 
         $servicioExport = app(PdfExportService::class);
 
@@ -1511,13 +1597,20 @@ class HistoriaClinicaController extends Controller
             ], 400);
         }
 
-        $filtros = $request->only([
+        $filtros = Acceso::sanitizarFiltrosExport($request->only([
             'fechaInicio',
             'fechaFin',
             'id_paciente',
             'id_profesional',
             'servicio',
-        ]);
+        ]));
+
+        if ($filtros === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para exportar',
+            ], 403);
+        }
 
         $servicioExport = app(PdfExportService::class);
         $concurrencia = app(ExportConcurrencyService::class);
@@ -1628,13 +1721,20 @@ class HistoriaClinicaController extends Controller
             ], 400);
         }
 
-        $filtros = $request->only([
+        $filtros = Acceso::sanitizarFiltrosExport($request->only([
             'fechaInicio',
             'fechaFin',
             'id_paciente',
             'id_profesional',
             'servicio',
-        ]);
+        ]));
+
+        if ($filtros === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para exportar',
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,

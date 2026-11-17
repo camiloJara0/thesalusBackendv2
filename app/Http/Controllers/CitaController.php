@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Profesional;
+use App\Support\Acceso;
 
 class CitaController extends Controller
 {
@@ -21,7 +22,13 @@ class CitaController extends Controller
      */
     public function index()
     {
-        $cita = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio', 'analisis'])->orderBy('id', 'desc')->limit(200)->get();
+        $query = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio', 'analisis']);
+
+        if (Acceso::esProfesional()) {
+            $query->where('id_medico', Acceso::idProfesional());
+        }
+
+        $cita = $query->orderBy('id', 'desc')->limit(200)->get();
 
         return response()->json([
             'success' => true,
@@ -79,9 +86,13 @@ class CitaController extends Controller
         $fin = now()->endOfMonth()->toDateString();
 
         $citas = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio'])
-            ->whereBetween('fecha', [$inicio, $fin])
-            ->limit(200)
-            ->get();
+            ->whereBetween('fecha', [$inicio, $fin]);
+
+        if (Acceso::esProfesional()) {
+            $citas->where('id_medico', Acceso::idProfesional());
+        }
+
+        $citas = $citas->limit(200)->get();
 
         return response()->json(['success' => true, 'data' => $citas]);
     }
@@ -146,6 +157,10 @@ class CitaController extends Controller
     public function citasFiltradas(Request $request)
     {
         $query = Cita::with(['paciente.infoUsuario', 'profesional.infoUsuario', 'servicio']);
+
+        if (Acceso::esProfesional()) {
+            $query->where('id_medico', Acceso::idProfesional());
+        }
 
         if ($request->filled('estado')) {
             $query->where('citas.estado', 'like', "%{$request->estado}%");

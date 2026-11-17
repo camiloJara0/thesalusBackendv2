@@ -10,6 +10,7 @@ use App\Models\Historial_cambio_sonda;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Support\Acceso;
 
 class KardexController extends Controller
 {
@@ -44,6 +45,13 @@ class KardexController extends Controller
 
     public function registrosPaciente(Request $request, $idPaciente)
     {
+        if (!Acceso::puedeVerPaciente((int) $idPaciente)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este paciente',
+            ], 403);
+        }
+
         $idPlantilla = $request->query('plantilla');
 
         $query = KardexRegistro::where('kardex_registros.id_paciente', $idPaciente)

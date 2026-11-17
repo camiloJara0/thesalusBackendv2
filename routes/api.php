@@ -51,6 +51,13 @@ use App\Http\Controllers\VadecumController;
 use App\Http\Controllers\ConvenioController;
 use App\Http\Controllers\TipoEquipoController;
 use App\Http\Controllers\HistorialInsumoprestadoController;
+use App\Http\Controllers\Backoffice\PanelController;
+use App\Http\Controllers\Backoffice\ErroresController;
+use App\Http\Controllers\Backoffice\TrabajosController;
+use App\Http\Controllers\Backoffice\AuditoriaController;
+use App\Http\Controllers\Backoffice\UsuariosController;
+use App\Http\Controllers\Backoffice\LimpiezaController;
+use App\Http\Controllers\Backoffice\RespaldosController;
 
 Route::post('/v1/login', [UserController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/v1/recuperarContraseña', [UserController::class, 'verificacion'])->middleware('throttle:3,1');
@@ -179,3 +186,50 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::post('/v1/insumosPrestados', [MovimientoController::class, 'insumosPrestados']);
         Route::get('/v1/imprimirComoDato/{id}', [PlanManejoMedicamentoController::class, 'imprimirComodato']);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Backoffice de desarrolladores (solo SuperAdmin)
+|--------------------------------------------------------------------------
+| Doble gate: backoffice.access (rol SuperAdmin) + permiso:Backoffice_*.
+| Alta de SuperAdmin solo vía comando artisan superadmin:assign.
+*/
+Route::middleware(['auth:sanctum', 'check.token.expiration', 'backoffice.access'])
+    ->prefix('v1/backoffice')
+    ->group(function () {
+        Route::get('/ping', [PanelController::class, 'ping'])->middleware('permiso:Backoffice_view');
+
+        // Monitor de errores
+        Route::get('/errores', [ErroresController::class, 'index'])->middleware('permiso:Backoffice_errores');
+        Route::get('/errores/{id}', [ErroresController::class, 'show'])->middleware('permiso:Backoffice_errores');
+        Route::delete('/errores', [ErroresController::class, 'destroy'])->middleware(['permiso:Backoffice_errores', 'throttle:30,1']);
+
+        // Monitor de trabajos
+        Route::get('/trabajos', [TrabajosController::class, 'index'])->middleware('permiso:Backoffice_trabajos');
+        Route::get('/trabajos/failed/{id}', [TrabajosController::class, 'showFailed'])->middleware('permiso:Backoffice_trabajos');
+        Route::post('/trabajos/failed/{id}/reintentar', [TrabajosController::class, 'retryFailed'])->middleware(['permiso:Backoffice_trabajos', 'throttle:30,1']);
+        Route::get('/exportaciones', [TrabajosController::class, 'exportaciones'])->middleware('permiso:Backoffice_trabajos');
+
+        // Auditoria
+        Route::get('/auditoria', [AuditoriaController::class, 'index'])->middleware('permiso:Backoffice_auditoria');
+        Route::get('/auditoria/{id}', [AuditoriaController::class, 'show'])->middleware('permiso:Backoffice_auditoria');
+
+        // Metricas y salud
+        Route::get('/metricas', [PanelController::class, 'metricas'])->middleware('permiso:Backoffice_metricas');
+        Route::get('/salud', [PanelController::class, 'salud'])->middleware('permiso:Backoffice_salud');
+
+        // Usuarios y tokens
+        Route::get('/usuarios', [UsuariosController::class, 'index'])->middleware('permiso:Backoffice_usuarios');
+        Route::get('/usuarios/{id}', [UsuariosController::class, 'show'])->middleware('permiso:Backoffice_usuarios');
+        Route::post('/usuarios/{id}/tokens/purgar', [UsuariosController::class, 'purgarTokens'])->middleware(['permiso:Backoffice_usuarios', 'throttle:30,1']);
+
+        // Limpieza
+        Route::post('/limpieza/temporales', [LimpiezaController::class, 'temporales'])->middleware(['permiso:Backoffice_limpieza', 'throttle:30,1']);
+        Route::post('/limpieza/logs', [LimpiezaController::class, 'logs'])->middleware(['permiso:Backoffice_limpieza', 'throttle:30,1']);
+        Route::post('/limpieza/tokens', [LimpiezaController::class, 'tokens'])->middleware(['permiso:Backoffice_limpieza', 'throttle:30,1']);
+
+        // Respaldos
+        Route::get('/respaldos', [RespaldosController::class, 'index'])->middleware('permiso:Backoffice_respaldos');
+        Route::post('/respaldos', [RespaldosController::class, 'store'])->middleware(['permiso:Backoffice_respaldos', 'throttle:30,1']);
+        Route::get('/respaldos/{archivo}/descargar', [RespaldosController::class, 'descargar'])->middleware('permiso:Backoffice_respaldos');
+    });

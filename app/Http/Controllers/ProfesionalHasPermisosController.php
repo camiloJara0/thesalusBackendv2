@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 use App\Models\Profesionals;
 use App\Models\Profesional_has_permisos;
+use App\Support\Audit;
 use App\Models\Secciones;
 use Illuminate\Http\Request;
 use App\Mail\SolicitudPermisoMail;
@@ -188,6 +189,20 @@ class ProfesionalHasPermisosController extends Controller
                 throw new \Exception("Sección o profesional no encontrados");
             }
 
+            if (str_starts_with($seccion->nombre, 'Backoffice_')) {
+                DB::rollBack();
+
+                Audit::log('permiso.rechazado', [
+                    'descripcion' => 'Intento de solicitar seccion Backoffice',
+                    'datos' => ['id_seccion' => $seccion->id, 'seccion' => $seccion->nombre, 'id_profesional' => $request->id_profesional],
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La sección no es solicitable',
+                ], 403);
+            }
+
             $token = Str::uuid();
 
             DB::table('solicitud_permisos')->insert([
@@ -205,6 +220,13 @@ class ProfesionalHasPermisosController extends Controller
             Mail::to('camilojara0000@gmail.com')->send(new SolicitudPermisoMail($link, $profesional, $seccion));
 
             DB::commit();
+
+            Audit::log('permiso.solicitado', [
+                'modelo' => 'solicitud_permisos',
+                'modelo_id' => $request->id_profesional,
+                'descripcion' => "Solicitud de permiso {$seccion->nombre}",
+                'datos' => ['id_profesional' => $request->id_profesional, 'seccion' => $seccion->nombre],
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -238,6 +260,25 @@ class ProfesionalHasPermisosController extends Controller
                 throw new \Exception("Solicitud inválida o ya usada");
             }
 
+            $esBackoffice = DB::table('secciones')
+                ->where('id', $solicitud->id_seccion)
+                ->where('nombre', 'like', 'Backoffice_%')
+                ->exists();
+
+            if ($esBackoffice) {
+                DB::rollBack();
+
+                Audit::log('permiso.rechazado', [
+                    'descripcion' => 'Intento de aprobar seccion Backoffice',
+                    'datos' => ['id_seccion' => $solicitud->id_seccion, 'id_profesional' => $solicitud->id_profesional],
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La sección no es aprobable',
+                ], 403);
+            }
+
             $codigo = Str::random(6);
 
             DB::table('profesional_has_permisos')->insert([
@@ -265,6 +306,13 @@ class ProfesionalHasPermisosController extends Controller
             Mail::to($profesional->correo)->send(new PermisoAprobadoMail($codigo, $profesional->correo));
 
             DB::commit();
+
+            Audit::log('permiso.aprobado', [
+                'modelo' => 'profesional_has_permisos',
+                'modelo_id' => $solicitud->id_profesional,
+                'descripcion' => 'Permiso aprobado',
+                'datos' => ['id_profesional' => $solicitud->id_profesional, 'id_seccion' => $solicitud->id_seccion],
+            ]);
 
             return response()->json([
                 'success' => true,

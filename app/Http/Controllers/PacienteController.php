@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Paciente;
-use App\Models\Profesional;
-use App\Models\Profesion_has_permisos;
 use App\Models\InformacionUser;
 use App\Models\Eps;
 use App\Models\Plan_manejo_procedimiento;
@@ -16,6 +14,7 @@ use App\Http\Requests\UpdatePacienteRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Support\Acceso;
 use Carbon\Carbon;
 
 
@@ -28,28 +27,9 @@ class PacienteController extends Controller
      */
     public function index()
     {
-        $authUser = Auth::user();
-        
-        if($authUser->rol == 'Admin'){
-            $pacientes = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
-
-            } else {
-
-                $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
-                $filtrar = Profesion_has_permisos::where('id_profesion', $profesional->id_profesion)->where('id_seccion', 76)->first();
-
-                if ($filtrar) {
-                    $pacientes = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
-
-                } else {
-                    $pacientes = Paciente::with(['infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos'])
-                        ->where('estado', 1)
-                        ->whereHas('citas', function ($query) use ($profesional) {
-                            $query->where('id_medico', $profesional->id);
-                        })
-                        ->get();
-                }
-        }
+        $query = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1);
+        Acceso::scopePacientes($query);
+        $pacientes = $query->get();
 
         foreach ($pacientes as $p) {
             $convenio = $p->convenios->first(); // devuelve el primer convenio o null
@@ -62,7 +42,9 @@ class PacienteController extends Controller
 
     public function pacientesInactivos()
     {
-        $paciente = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 0)->get();
+        $query = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 0);
+        Acceso::scopePacientes($query);
+        $paciente = $query->get();
         foreach ($paciente as $p) {
             $convenio = $p->convenios->first(); // devuelve el primer convenio o null
         }
@@ -80,27 +62,10 @@ class PacienteController extends Controller
             'message' => 'no se econtro usuario'
            ]);
         };
-        $pacientes;
-        
-        if($authUser->rol !== 'Profesional'){
-            $pacientes = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
 
-            } else {
-                $profesional = Profesional::where('id_infoUsuario', $authUser->id_infoUsuario)->first();
-                $filtrar = Profesion_has_permisos::where('id_profesion', $profesional->id_profesion)->where('id_seccion', 76)->first();
-
-                if ($filtrar) {
-                    $pacientes = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1)->get();
-
-                } else {
-                    $pacientes = Paciente::with(['infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos'])
-                        ->where('estado', 1)
-                        ->whereHas('citas', function ($query) use ($profesional) {
-                            $query->where('id_medico', $profesional->id);
-                        })
-                        ->get();
-                }
-        }
+        $query = Paciente::with('infoUsuario', 'eps', 'antecedente', 'convenios', 'planManejoProcedimientos')->where('estado', 1);
+        Acceso::scopePacientes($query);
+        $pacientes = $query->get();
 
         foreach ($pacientes as $p) {
             $convenio = $p->convenios->first(); // devuelve el primer convenio o null
@@ -113,7 +78,7 @@ class PacienteController extends Controller
 
     public function traeKardex()
     {
-        $pacientes = DB::table('pacientes')
+        $query = DB::table('pacientes')
             ->where('pacientes.estado', 1)
             ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
             ->join('eps', 'pacientes.id_eps', '=', 'eps.id')
@@ -124,8 +89,16 @@ class PacienteController extends Controller
                 'eps.nombre as Eps',
                 'pacientes.id as paciente_id',
                 'kardex.*'
-            )
-            ->get();
+            );
+
+        if (!Acceso::puedeVerTodosPacientes()) {
+            $idMedico = Acceso::idProfesional();
+            $query->whereIn('pacientes.id', function ($sub) use ($idMedico) {
+                $sub->select('id_paciente')->from('citas')->where('id_medico', $idMedico);
+            });
+        }
+
+        $pacientes = $query->get();
 
         
         $kardex = [];
@@ -400,6 +373,10 @@ class PacienteController extends Controller
      */
     public function show(Paciente $paciente)
     {
+        if (!Acceso::puedeVerPaciente((int) $paciente->id)) {
+            return response()->json(['success' => false, 'message' => 'No autorizado para acceder a este paciente'], 403);
+        }
+
         return $paciente;
     }
 
@@ -412,6 +389,10 @@ class PacienteController extends Controller
      */
     public function update(UpdatePacienteRequest $request, Paciente $paciente)
     {
+        if ($request->filled('id') && !Acceso::puedeVerPaciente((int) $request->id)) {
+            return response()->json(['success' => false, 'message' => 'No autorizado para modificar este paciente'], 403);
+        }
+
         $data = $request->all();
 
         $informacionUser = InformacionUser::where('No_document', $request->info_usuario['No_document'])->first();
@@ -514,6 +495,10 @@ class PacienteController extends Controller
     {
         // Actualizar información del usuario
         $paciente = Paciente::find($request->id);
+
+        if($paciente && !Acceso::puedeVerPaciente((int) $paciente->id)) {
+            return response()->json(['success' => false, 'message' => 'No autorizado para deshabilitar este paciente'], 403);
+        }
 
         if($paciente){
             $paciente->estado = 0;

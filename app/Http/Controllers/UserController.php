@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Profesional_has_permisos;
 use App\Models\Profesional;
 use App\Models\Empresa;
+use App\Support\Audit;
 
 
 class UserController extends Controller
@@ -196,6 +197,12 @@ class UserController extends Controller
         $user = User::where('correo', $request->correo)->first();
 
         if (!$user) {
+            Audit::log('login.fallido', [
+                'correo' => $request->correo,
+                'descripcion' => 'Correo no registrado',
+                'datos' => ['tipo' => 'USER_NOT_FOUND'],
+            ]);
+
             return response()->json([
                 'success' => false,
                 'type'    => 'USER_NOT_FOUND',
@@ -204,6 +211,13 @@ class UserController extends Controller
         }
 
         if ($user->estado == 0){
+            Audit::log('login.fallido', [
+                'user_id' => $user->id,
+                'correo' => $user->correo,
+                'descripcion' => 'Usuario deshabilitado',
+                'datos' => ['tipo' => 'USER_DELETE'],
+            ]);
+
             return response()->json([
                 'success' => false,
                 'type'    => 'USER_DELETE',
@@ -216,6 +230,15 @@ class UserController extends Controller
             ->first();
 
         if (!Hash::check($request->contraseña, $user->contraseña) && !$registro) {
+            Audit::log('login.fallido', [
+                'user_id' => $user->id,
+                'correo' => $user->correo,
+                'modelo' => 'users',
+                'modelo_id' => $user->id,
+                'descripcion' => 'Contrasena incorrecta',
+                'datos' => ['tipo' => 'INVALID_PASSWORD'],
+            ]);
+
             return response()->json([
                 'success' => false,
                 'type'    => 'INVALID_PASSWORD',
@@ -290,12 +313,14 @@ class UserController extends Controller
                     $permisos = collect();
                 }
 
-        } elseif ($user->rol == 'Admin') {
+        } elseif (in_array($user->rol, ['Admin', 'SuperAdmin'], true)) {
             $permisos = DB::table('secciones')->pluck('nombre');
         } else {
             $permisos = collect(); // colección vacía
         }
 
+
+        $permisos = collect($permisos)->merge(config('permisos.base'))->unique()->values();
 
         if($registro){
             DB::table('profesional_has_permisos')
@@ -305,6 +330,15 @@ class UserController extends Controller
                     'updated_at' => now()
                 ]);
         }
+
+        Audit::log('login', [
+            'user_id' => $user->id,
+            'correo' => $user->correo,
+            'modelo' => 'users',
+            'modelo_id' => $user->id,
+            'descripcion' => 'Login exitoso',
+            'datos' => ['rol' => $user->rol],
+        ]);
 
         return response()->json([
             'success' => true,

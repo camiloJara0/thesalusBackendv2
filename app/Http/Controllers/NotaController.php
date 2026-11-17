@@ -14,6 +14,7 @@ use App\Models\Paciente;
 use App\Models\Profesional;
 use App\Models\InformacionUser;
 use App\Models\Analisis;
+use App\Support\Acceso;
 
 class NotaController extends Controller
 {
@@ -24,7 +25,20 @@ class NotaController extends Controller
      */
     public function index()
     {
-        $nota = Nota::get();
+        $query = Nota::query();
+
+        if (!Acceso::puedeVerTodosPacientes()) {
+            $idMedico = Acceso::idProfesional();
+            $query->whereIn('id_analisis', function ($sub) use ($idMedico) {
+                $sub->select('analises.id')
+                    ->from('analises')
+                    ->join('historia__clinicas', 'analises.id_historia', '=', 'historia__clinicas.id')
+                    ->join('citas', 'citas.id_paciente', '=', 'historia__clinicas.id_paciente')
+                    ->where('citas.id_medico', $idMedico);
+            });
+        }
+
+        $nota = $query->get();
 
         return response()->json([
             'success' => true,
@@ -65,6 +79,13 @@ class NotaController extends Controller
      */
     public function show(Nota $nota)
     {
+        if (!Acceso::puedeVerAnalisis((int) $nota->id_analisis)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este registro',
+            ], 403);
+        }
+
         return $nota;
     }
 
@@ -169,6 +190,13 @@ class NotaController extends Controller
 
     public function imprimir($id)
     {
+        if (!Acceso::puedeVerAnalisis((int) $id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado para acceder a este registro',
+            ], 403);
+        }
+
         $nota = Nota::where('id_analisis', $id)->first();
 
         $analisis =DB::table('analises')

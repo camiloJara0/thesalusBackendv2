@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         $this->call(EmpresaUsuarioSeeder::class);
+        $this->call(SuperadminSeeder::class); // requiere SUPERADMIN_PASSWORD en .env
         $this->call(PermisosSeeder::class);
         $this->call(EPSSeeder::class);
 

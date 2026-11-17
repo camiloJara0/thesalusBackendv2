@@ -17,6 +17,8 @@ return [
 
     'default' => env('DB_CONNECTION', 'mysql'),
 
+    'mysqldump_path' => env('MYSQLDUMP_PATH'),
+
     /*
     |--------------------------------------------------------------------------
     | Database Connections

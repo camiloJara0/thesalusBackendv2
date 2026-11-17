@@ -47,6 +47,39 @@ trait WithApiUser
         return Empresa::find(1);
     }
 
+    protected function createSuperAdminUser(): User
+    {
+        $empresa = $this->ensureEmpresaId1();
+
+        $info = InformacionUser::create([
+            'name' => 'Super Admin Test',
+            'No_document' => '1000000002',
+            'type_doc' => 'CC',
+            'celular' => '3001234569',
+            'nacimiento' => '1990-01-01',
+            'direccion' => 'Calle 3 #3-3',
+            'municipio' => 'Bogota',
+            'departamento' => 'Bogota',
+            'barrio' => 'Centro',
+            'zona' => 'Urbana',
+        ]);
+
+        return User::create([
+            'id_empresa' => $empresa->id,
+            'id_infoUsuario' => $info->id,
+            'correo' => 'superadmin@test.com',
+            'contraseña' => Hash::make('password123'),
+            'rol' => 'SuperAdmin',
+            'estado' => 1,
+        ]);
+    }
+
+    protected function loginAsSuperAdmin(): string
+    {
+        $user = $this->createSuperAdminUser();
+        return $this->loginAs($user);
+    }
+
     protected function createAdminUser(): User
     {
         $empresa = $this->ensureEmpresaId1();

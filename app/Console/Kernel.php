@@ -23,6 +23,9 @@ class Kernel extends ConsoleKernel
 
         // Libera cupos si un worker murio sin finalizar exportaciones
         $schedule->command('exports:reap')->everyFifteenMinutes();
+
+        // Consolida metricas diarias de la API desde cache
+        $schedule->command('metricas:flush')->dailyAt('00:05');
     }
 
     /**
