@@ -135,6 +135,7 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::post('/v1/citasFiltradas', [CitaController::class, 'citasFiltradas']);
         Route::get('/v1/filtrosCitas', [CitaController::class, 'filtrosCitas']);
         Route::post('/v1/variasCitas', [CitaController::class, 'variasCitas']);
+        Route::get('/v1/citasDetalle/{id}', [CitaController::class, 'detalle']);
 
         Route::get('/v1/analisisInicial', [HistoriaClinicaController::class, 'analisisInicial']);
         Route::post('/v1/analisisPaciente', [HistoriaClinicaController::class, 'analisisPaciente']);

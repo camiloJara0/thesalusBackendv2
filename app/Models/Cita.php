@@ -40,4 +40,9 @@ class Cita extends Model
     {
         return $this->belongsTo(Analisis::class, 'id_analisis');
     }
+
+    public function auditorias()
+    {
+        return $this->hasMany(CitaAuditoria::class, 'id_cita')->orderBy('created_at');
+    }
 }

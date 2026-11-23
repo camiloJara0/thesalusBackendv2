@@ -30,6 +30,7 @@ use App\Jobs\ExportZipJob;
 use App\Services\PdfExportService;
 use App\Services\ExportConcurrencyService;
 use App\Support\Acceso;
+use App\Support\CitaAuditoria;
 
 use ZipArchive;
 use Illuminate\Support\Facades\File;
@@ -505,11 +506,7 @@ class HistoriaClinicaController extends Controller
                 }
 
             // 4️⃣ Actualizar estado de la Cita
-            Cita::where('id', $data['Cita']['id'] ?? null)
-                ->update([
-                    'estado' => 'Realizada',
-                    'id_analisis' => $analisis->id
-                ]);
+            CitaAuditoria::marcarRealizada($data['Cita']['id'] ?? null, $analisis->id);
 
             DB::commit();
 
@@ -594,11 +591,7 @@ class HistoriaClinicaController extends Controller
             }
 
             // 4️⃣ Actualizar estado de la Cita
-            Cita::where('id', $data['Cita']['id'] ?? null)
-                ->update([
-                    'estado' => 'Realizada',
-                    'id_analisis' => $analisis->id
-                ]);
+            CitaAuditoria::marcarRealizada($data['Cita']['id'] ?? null, $analisis->id);
 
             DB::commit();
 
@@ -670,11 +663,7 @@ class HistoriaClinicaController extends Controller
             }
 
             // 4️⃣ Actualizar estado de la Cita
-            Cita::where('id', $data['Cita']['id'] ?? null)
-                ->update([
-                    'estado' => 'Realizada',
-                    'id_analisis' => $analisis->id
-                ]);
+            CitaAuditoria::marcarRealizada($data['Cita']['id'] ?? null, $analisis->id);
 
 
             DB::commit();
@@ -746,11 +735,7 @@ class HistoriaClinicaController extends Controller
 
             // 4️⃣ Actualizar estado de la Cita
 
-            Cita::where('id', $data['Cita']['id'] ?? null)
-                ->update([
-                    'estado' => 'Realizada',
-                    'id_analisis' => $analisis->id
-                ]);
+            CitaAuditoria::marcarRealizada($data['Cita']['id'] ?? null, $analisis->id);
 
 
             DB::commit();
@@ -901,11 +886,7 @@ class HistoriaClinicaController extends Controller
 
             // 8️⃣ Cita
             if (!empty($data['Cita'])) {
-                Cita::where('id', $data['Cita']['id'] ?? null)
-                    ->update([
-                        'estado' => 'Realizada',
-                        'id_analisis' => $analisis->id
-                    ]);
+                CitaAuditoria::marcarRealizada($data['Cita']['id'] ?? null, $analisis->id);
             }
 
             DB::commit();

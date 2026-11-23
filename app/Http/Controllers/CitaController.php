@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Profesional;
 use App\Support\Acceso;
+use App\Support\CitaAuditoria;
 
 class CitaController extends Controller
 {
@@ -259,6 +260,8 @@ class CitaController extends Controller
             $cita->id_procedimiento   = $plan ? $plan->id : $request->id_procedimiento;
             $cita->save();
 
+            CitaAuditoria::registrar($cita, 'creada', null, $cita->estado);
+
             DB::commit();
 
             return response()->json([
@@ -270,7 +273,12 @@ class CitaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al registrar Cita', ['exception' => $e]);
-            return response()->json(['success' => false, 'message' => 'Error al registrar Cita'], 500);
+            return response()->json([
+                'success' => false,
+                'codigo'  => 'servidor',
+                'accion'  => 'Intente nuevamente; si persiste contacte al administrador.',
+                'message' => 'Error al registrar la cita. Verifique que los datos del servicio y del paciente sean correctos.',
+            ], 500);
         }
     }
 
@@ -328,13 +336,17 @@ class CitaController extends Controller
             $cita->id_procedimiento   = $plan ? $plan->id : $request->Cita['id_procedimiento'];
             $cita->save();
 
+            CitaAuditoria::registrar($cita, 'creada', null, $cita->estado);
+
             $citas[] = $cita;
         }
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Error al registrar las citas',
+                'codigo'  => 'servidor',
+                'accion'  => 'Intente nuevamente; si persiste contacte al administrador.',
+                'message' => 'Error al registrar las citas. Verifique los datos del paciente y del servicio.',
             ], 500);
         }
         DB::commit();
@@ -371,6 +383,8 @@ class CitaController extends Controller
         if(!$cita){
             return response()->json([
                 'success' => false,
+                'codigo'  => 'no_encontrado',
+                'accion'  => 'El registro puede haber sido eliminado por otro usuario. Actualice la agenda.',
                 'message' => 'Cita no encontrada',
             ], 404);
         }
@@ -383,7 +397,9 @@ class CitaController extends Controller
         $cita->motivo_edicion = $request->motivo_edicion;
         $cita->save();
 
-        // Respuesta 
+        CitaAuditoria::registrar($cita, 'editada', $cita->estado, $cita->estado, $request->motivo_edicion);
+
+        // Respuesta
             return response()->json([
                 'success' => true,
                 'message' => 'Cita actualizada exitosamente.',
@@ -400,11 +416,22 @@ class CitaController extends Controller
     public function destroy(Request $request, Cita $cita)
     {
         $cita = Cita::where('id', $request->id)->first();
-        if($cita){
-            $cita->estado = $request->estado;
-            $cita->motivo_cancelacion = $request->motivo_cancelacion;
-            $cita->save();
+
+        if(!$cita){
+            return response()->json([
+                'success' => false,
+                'codigo'  => 'no_encontrado',
+                'accion'  => 'El registro puede haber sido eliminado por otro usuario. Actualice la agenda.',
+                'message' => 'Cita no encontrada',
+            ], 404);
         }
+
+        $estadoAnterior = $cita->estado;
+        $cita->estado = $request->estado;
+        $cita->motivo_cancelacion = $request->motivo_cancelacion;
+        $cita->save();
+
+        CitaAuditoria::registrar($cita, 'cancelada', $estadoAnterior, $cita->estado, $request->motivo_cancelacion);
 
         // Respuesta
         return response()->json([
@@ -412,5 +439,43 @@ class CitaController extends Controller
             'message' => 'Cita cancelada exitosamente.',
             'data' => $cita
         ], 200);
+    }
+
+    /**
+     * Detalle completo de una cita: datos, contexto clinico asociado
+     * e historial de auditoria/estados.
+     */
+    public function detalle(Request $request, $id)
+    {
+        $cita = Cita::with([
+            'paciente.infoUsuario',
+            'profesional.infoUsuario',
+            'servicio',
+            'analisis',
+            'auditorias',
+        ])->find($id);
+
+        if (!$cita) {
+            return response()->json([
+                'success' => false,
+                'codigo'  => 'no_encontrado',
+                'accion'  => 'La cita no existe o fue eliminada. Actualice la agenda.',
+                'message' => 'Cita no encontrada',
+            ], 404);
+        }
+
+        if (Acceso::esProfesional() && $cita->id_medico !== Acceso::idProfesional()) {
+            return response()->json([
+                'success' => false,
+                'codigo'  => 'permiso',
+                'accion'  => 'Solo puede consultar el detalle de sus propias citas.',
+                'message' => 'No tiene acceso a esta cita',
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $cita
+        ]);
     }
 }

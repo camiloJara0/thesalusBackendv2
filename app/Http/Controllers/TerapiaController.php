@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateTerapiaRequest;
 
 use Illuminate\Http\Request;
 use App\Support\Acceso;
+use App\Support\CitaAuditoria;
 
 class TerapiaController extends Controller
 {
@@ -101,11 +102,7 @@ class TerapiaController extends Controller
 
             // 4️⃣ Actualizar estado de la Cita
             if (!empty($data['Cita'])) {
-                Cita::where('id', $data['Cita']['id'] ?? null)
-                    ->update([
-                        'estado' => 'Realizada',
-                        'id_analisis' => $analisis->id
-                    ]);
+                CitaAuditoria::marcarRealizada($data['Cita']['id'] ?? null, $analisis->id);
             }
 
             DB::commit();
