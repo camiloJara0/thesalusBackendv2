@@ -70,7 +70,7 @@ class ServicioController extends Controller
         $servicio = Servicio::where('id', $request->id)->first();
         if($servicio){
 
-            $servicio->plantilla = $request->plantilla;
+            // $servicio->plantilla = $request->plantilla;
             $servicio->name = $request->name;
             $servicio->save();
 
