@@ -60,6 +60,7 @@ use App\Http\Controllers\Backoffice\LimpiezaController;
 use App\Http\Controllers\Backoffice\RespaldosController;
 
 Route::post('/v1/login', [UserController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/v1/login/codigo-temporal', [UserController::class, 'loginCodigoTemporal'])->middleware('throttle:5,1');
 Route::post('/v1/recuperarContraseña', [UserController::class, 'verificacion'])->middleware('throttle:3,1');
 Route::post('/v1/cambiarContraseña', [UserController::class, 'verificarCodigo'])->middleware('throttle:5,1');
 Route::post('/v1/cambiarContraseñaPrimerVez', [UserController::class, 'verificarCodigoPrimerVez'])->middleware('throttle:5,1');
@@ -146,6 +147,7 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
 
         Route::post('/v1/diasAsignadosRestantes', [PlanManejoProcedimientoController::class, 'diasAsignadosRestantes']);
         Route::get('/v1/administradores', [UserController::class, 'administradores']);
+        Route::post('/v1/administradores/{id}/codigo-acceso-temporal', [UserController::class, 'generarCodigoAccesoTemporal'])->middleware('throttle:10,1');
         Route::get('/v1/secciones', [SeccionesController::class, 'index']);
         Route::get('/v1/dashboard', [DashboardController::class, 'dashboard']);
         Route::post('/v1/logout', [UserController::class, 'logout'])->middleware('throttle:3,1');
@@ -158,6 +160,7 @@ Route::middleware(['auth:sanctum', 'check.token.expiration'])->group(function ()
         Route::post('/v1/traePacientes', [PacienteController::class, 'traePacientes']);
         Route::get('/v1/pacientesInactivos', [PacienteController::class, 'pacientesInactivos']);
         Route::get('/v1/traeKardex', [PacienteController::class, 'traeKardex']);
+        Route::get('/v1/pacientePerfil/{id}', [PacienteController::class, 'perfil']);
         Route::get('/v1/traeProfesionales', [ProfesionalController::class, 'traeProfesionales']);
         Route::get('/v1/profesionalesInactivos', [ProfesionalController::class, 'profesionalesInactivos']);
 

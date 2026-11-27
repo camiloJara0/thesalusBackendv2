@@ -9,6 +9,11 @@ use App\Models\Plan_manejo_procedimiento;
 use App\Models\Paciente_has_convenio;
 use App\Models\Antecedente;
 use App\Models\Cita;
+use App\Models\Analisis;
+use App\Models\Diagnostico;
+use App\Models\Kardex;
+use App\Models\KardexPlantilla;
+use App\Models\KardexRegistro;
 use App\Http\Requests\StorePacienteRequest;
 use App\Http\Requests\UpdatePacienteRequest;
 use Illuminate\Http\Request;
@@ -74,6 +79,130 @@ class PacienteController extends Controller
             'success' => true,
             'data' => $pacientes,
         ], 200);
+    }
+
+    /**
+     * Perfil integral del paciente: composición clínica en una sola
+     * respuesta (datos generales, kardex, citas programadas, última
+     * nota, diagnósticos y resumen de atención) para la ficha del
+     * profesional. Guard de acceso programático (Acceso).
+     */
+    public function perfil(Request $request, $id)
+    {
+        $paciente = Paciente::with('infoUsuario', 'eps', 'convenios', 'antecedente', 'planManejoProcedimientos')
+            ->find($id);
+
+        if (!$paciente) {
+            return response()->json([
+                'success' => false,
+                'codigo'  => 'no_encontrado',
+                'accion'  => 'El paciente no existe o fue eliminado. Actualice la lista de pacientes.',
+                'message' => 'Paciente no encontrado',
+            ], 404);
+        }
+
+        if (!Acceso::puedeVerPaciente((int) $id)) {
+            return response()->json([
+                'success' => false,
+                'codigo'  => 'permiso',
+                'accion'  => 'Solo puede consultar la ficha de pacientes con los que tiene atención asignada.',
+                'message' => 'No tiene acceso a este paciente',
+            ], 403);
+        }
+
+        $hoy = now()->toDateString();
+
+        $analisisQuery = Analisis::whereHas('historia', function ($q) use ($id) {
+            $q->where('id_paciente', $id);
+        });
+
+        // Kardex dinámico vigente (EAV): plantilla activa + campos + registros
+        $plantillaKardex = KardexPlantilla::where('activo', 1)->orderBy('id')->first();
+        $camposKardex = $plantillaKardex
+            ? $plantillaKardex->campos()
+                ->where('kardex_campos.activo', 1)
+                ->orderBy('kardex_plantilla_campos.orden')
+                ->get()
+            : collect();
+        $registrosKardex = KardexRegistro::where('id_paciente', $id)
+            ->get()
+            ->mapWithKeys(fn ($r) => [$r->id_campo => $r->valor]);
+
+        // Kardex legacy (kits, traqueo, oxígeno): datos registrados
+        $kardexLegacy = Kardex::where('id_paciente', $id)->first();
+
+        // Próximas citas programadas del paciente
+        $citasProximas = Cita::with('profesional.infoUsuario', 'servicio')
+            ->where('id_paciente', $id)
+            ->where('estado', 'Inactiva')
+            ->whereRaw('COALESCE(fechaHasta, fecha) >= ?', [$hoy])
+            ->orderBy('fecha')
+            ->orderBy('hora')
+            ->limit(5)
+            ->get();
+
+        // Resumen de atención por servicio + última atención
+        $resumenServicios = (clone $analisisQuery)
+            ->join('servicio', 'analises.id_servicio', '=', 'servicio.id')
+            ->selectRaw("servicio.plantilla as plantilla, servicio.name as nombre, COUNT(*) as total")
+            ->groupBy('servicio.plantilla', 'servicio.name')
+            ->get();
+
+        $ultimaAtencion = (clone $analisisQuery)
+            ->with('servicio', 'profesional.infoUsuario')
+            ->orderByDesc('id')
+            ->first();
+
+        $totalAnalisis = (clone $analisisQuery)->count();
+
+        // Diagnósticos más recientes (CIE-10)
+        $ultimosAnalisisIds = (clone $analisisQuery)
+            ->latest('id')
+            ->limit(50)
+            ->pluck('id');
+
+        $diagnosticos = Diagnostico::whereIn(
+            'id_analisis',
+            $ultimosAnalisisIds
+        )
+        ->latest('id_analisis')
+        ->get();
+
+        // Última nota clínica registrada (con descripciones SOAP)
+        $ultimaNota = (clone $analisisQuery)
+            ->whereHas('servicio', function ($q) {
+                $q->where('plantilla', 'Nota');
+            })
+            ->with('nota.descripcionNota', 'servicio', 'profesional.infoUsuario', 'diagnosticos')
+            ->orderByDesc('id')
+            ->first();
+
+        // Análisis recientes (historia clínica en la ficha)
+        $analisisRecientes = (clone $analisisQuery)
+            ->with('servicio', 'profesional.infoUsuario', 'nota', 'terapia', 'diagnosticos')
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'paciente' => $paciente,
+                'kardex' => [
+                    'plantilla' => $plantillaKardex,
+                    'campos' => $camposKardex,
+                    'registros' => $registrosKardex,
+                ],
+                'kardex_legacy' => $kardexLegacy,
+                'citas_proximas' => $citasProximas,
+                'ultima_atencion' => $ultimaAtencion,
+                'total_analisis' => $totalAnalisis,
+                'resumen_servicios' => $resumenServicios,
+                'diagnosticos' => $diagnosticos,
+                'ultima_nota' => $ultimaNota,
+                'analisis_recientes' => $analisisRecientes,
+            ],
+        ]);
     }
 
     public function traeKardex()

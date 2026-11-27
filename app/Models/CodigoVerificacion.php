@@ -9,6 +9,6 @@ class CodigoVerificacion extends Model
 {
     use HasFactory;
     protected $table = 'codigo_verificaciones';
-    protected $fillable = ['correo', 'codigo', 'expira_en', 'usado'];
+    protected $fillable = ['correo', 'codigo', 'expira_en', 'usado', 'generado_por', 'usado_en', 'ip_uso'];
 
 }

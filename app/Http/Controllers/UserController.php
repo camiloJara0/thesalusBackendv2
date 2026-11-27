@@ -192,6 +192,111 @@ class UserController extends Controller
         ], 200);
     }
 
+    /**
+     * Emite la sesión (token Sanctum + permisos) para un usuario ya validado.
+     * Reutilizada por login() y loginCodigoTemporal().
+     */
+    private function respuestaLogin(User $user, string $accionAuditoria = 'login', string $descripcionAuditoria = 'Login exitoso')
+    {
+        $user->tokens()
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->delete();
+
+        $tokenResult = $user->createToken('auth_token');
+
+        // Establece la expiración
+        $accessToken = $tokenResult->accessToken;
+        $accessToken->expires_at = now()->addHours(16);
+        $accessToken->save();
+
+        // Obtén el token en texto plano
+        $token = $tokenResult->plainTextToken;
+
+        // Obtener información adicional del usuario
+        $infoUsuario = InformacionUser::find($user->id_infoUsuario);
+
+        $permisos = [];
+        $hasPermisosIndividuales = [];
+        $idProfesional = null;
+
+        if ($user->rol === 'Profesional') {
+            // Obtener la profesión del usuario
+               $profesional = DB::table('profesionals')
+                    ->where('id_infoUsuario', $user->id_infoUsuario)
+                    ->first();
+
+                if ($profesional) {
+
+                    $idProfesional = $profesional->id;
+                    // 1️⃣ Permisos por profesión
+                    $permisosProfesion = DB::table('profesions_has_permisos')
+                        ->join('secciones', 'profesions_has_permisos.id_seccion', '=', 'secciones.id')
+                        ->where('profesions_has_permisos.id_profesion', $profesional->id_profesion)
+                        ->pluck('secciones.nombre');
+
+                    // 2️⃣ Permisos individuales activos
+                    $permisosIndividuales = DB::table('profesional_has_permisos')
+                        ->join('secciones', 'profesional_has_permisos.id_seccion', '=', 'secciones.id')
+                        ->where('profesional_has_permisos.id_profesional', $profesional->id)
+                        ->where('usado', 0)
+                        ->pluck('secciones.nombre');
+
+                    // 3️⃣ Unificar y eliminar duplicados
+                    $permisos = $permisosProfesion
+                        ->merge($permisosIndividuales)
+                        ->unique()
+                        ->values();
+
+                    $permisosTemporales = DB::table('profesional_has_permisos')
+                        ->join('secciones', 'profesional_has_permisos.id_seccion', '=', 'secciones.id')
+                        ->where('id_profesional', $profesional->id)
+                        ->where('usado', 0)
+                        ->select(
+                            'profesional_has_permisos.id as permiso_id',
+                            'secciones.nombre',
+                            'secciones.id as id_seccion'
+                        )
+                        ->get();
+
+                    $hasPermisosIndividuales = $permisosTemporales;
+
+                } else {
+                    $permisos = collect();
+                }
+
+        } elseif (in_array($user->rol, ['Admin', 'SuperAdmin'], true)) {
+            $permisos = DB::table('secciones')->pluck('nombre');
+        } else {
+            $permisos = collect(); // colección vacía
+        }
+
+
+        $permisos = collect($permisos)->merge(config('permisos.base'))->unique()->values();
+
+        Audit::log($accionAuditoria, [
+            'user_id' => $user->id,
+            'correo' => $user->correo,
+            'modelo' => 'users',
+            'modelo_id' => $user->id,
+            'descripcion' => $descripcionAuditoria,
+            'datos' => ['rol' => $user->rol],
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Login exitoso',
+            'access_token' => $token,
+            'user' => [
+                'correo' => $user->correo,
+                'rol' => $user->rol,
+                'usuario' => array_merge($infoUsuario->toArray(), ['id_profesional' => $idProfesional]),
+                'permisos' => $permisos
+            ],
+            'permisosTemporales' => $hasPermisosIndividuales
+        ];
+    }
+
     public function login(LoginRequest $request)
     {
         $user = User::where('correo', $request->correo)->first();
@@ -246,81 +351,7 @@ class UserController extends Controller
             ], 403);
         }
 
-        $user->tokens()
-            ->whereNotNull('expires_at')
-            ->where('expires_at', '<', now())
-            ->delete();
-
-        $tokenResult = $user->createToken('auth_token');
-        
-        // Establece la expiración
-        $accessToken = $tokenResult->accessToken;
-        $accessToken->expires_at = now()->addHours(16);
-        $accessToken->save();
-
-        // Obtén el token en texto plano
-        $token = $tokenResult->plainTextToken;
-
-        // Obtener información adicional del usuario
-        $infoUsuario = InformacionUser::find($user->id_infoUsuario);
-
-        $permisos = [];
-        $hasPermisosIndividuales = [];
-        $idProfesional = null;
-
-        if ($user->rol === 'Profesional') {
-            // Obtener la profesión del usuario
-               $profesional = DB::table('profesionals')
-                    ->where('id_infoUsuario', $user->id_infoUsuario)
-                    ->first();
-
-                if ($profesional) {
-
-                    $idProfesional = $profesional->id;
-                    // 1️⃣ Permisos por profesión
-                    $permisosProfesion = DB::table('profesions_has_permisos')
-                        ->join('secciones', 'profesions_has_permisos.id_seccion', '=', 'secciones.id')
-                        ->where('profesions_has_permisos.id_profesion', $profesional->id_profesion)
-                        ->pluck('secciones.nombre');
-
-                    // 2️⃣ Permisos individuales activos
-                    $permisosIndividuales = DB::table('profesional_has_permisos')
-                        ->join('secciones', 'profesional_has_permisos.id_seccion', '=', 'secciones.id')
-                        ->where('profesional_has_permisos.id_profesional', $profesional->id)
-                        ->where('usado', 0)
-                        ->pluck('secciones.nombre');
-
-                    // 3️⃣ Unificar y eliminar duplicados
-                    $permisos = $permisosProfesion
-                        ->merge($permisosIndividuales)
-                        ->unique()
-                        ->values();
-
-                    $permisosTemporales = DB::table('profesional_has_permisos')
-                        ->join('secciones', 'profesional_has_permisos.id_seccion', '=', 'secciones.id')
-                        ->where('id_profesional', $profesional->id)
-                        ->where('usado', 0)
-                        ->select(
-                            'profesional_has_permisos.id as permiso_id',
-                            'secciones.nombre',
-                            'secciones.id as id_seccion'
-                        )
-                        ->get();
-                        
-                    $hasPermisosIndividuales = $permisosTemporales;
-
-                } else {
-                    $permisos = collect();
-                }
-
-        } elseif (in_array($user->rol, ['Admin', 'SuperAdmin'], true)) {
-            $permisos = DB::table('secciones')->pluck('nombre');
-        } else {
-            $permisos = collect(); // colección vacía
-        }
-
-
-        $permisos = collect($permisos)->merge(config('permisos.base'))->unique()->values();
+        $payload = $this->respuestaLogin($user);
 
         if($registro){
             DB::table('profesional_has_permisos')
@@ -331,28 +362,185 @@ class UserController extends Controller
                 ]);
         }
 
-        Audit::log('login', [
-            'user_id' => $user->id,
-            'correo' => $user->correo,
+        return response()->json($payload);
+
+    }
+
+    /**
+     * Ingreso con CÓDIGO DE ACCESO TEMPORAL (un solo uso, con expiración).
+     * En una sola transacción: valida y consume el código, reemplaza la
+     * contraseña y emite el token de sesión. El usuario entra al sistema
+     * obligatoriamente con una contraseña nueva.
+     *
+     * Body: { correo, codigo, nueva_contraseña }
+     */
+    public function loginCodigoTemporal(Request $request)
+    {
+        $datos = $request->validate([
+            'correo'           => 'required|email',
+            'codigo'           => 'required|string',
+            'nueva_contraseña' => ['required', 'string', 'min:8', 'regex:/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/'],
+        ]);
+
+        $user = User::where('correo', $datos['correo'])->first();
+
+        if (!$user) {
+            Audit::log('codigo.temporal.fallido', [
+                'correo' => $datos['correo'],
+                'descripcion' => 'Correo no registrado al usar código temporal',
+                'datos' => ['tipo' => 'USER_NOT_FOUND'],
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'El correo no se encuentra registrado'
+            ], 403);
+        }
+
+        if ($user->estado == 0) {
+            Audit::log('codigo.temporal.fallido', [
+                'user_id' => $user->id,
+                'correo' => $user->correo,
+                'descripcion' => 'Usuario deshabilitado al usar código temporal',
+                'datos' => ['tipo' => 'USER_DELETE'],
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario deshabilitado'
+            ], 403);
+        }
+
+        // Solo códigos GENERADOS POR UN ADMINISTRADOR (generado_por != null);
+        // los códigos de recuperación por correo nunca consumen este flujo.
+        $registro = CodigoVerificacion::where('correo', $user->correo)
+            ->where('codigo', $datos['codigo'])
+            ->whereNotNull('generado_por')
+            ->where('usado', false)
+            ->where('expira_en', '>', now())
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$registro) {
+            Audit::log('codigo.temporal.fallido', [
+                'user_id' => $user->id,
+                'correo' => $user->correo,
+                'descripcion' => 'Código temporal inválido o expirado',
+                'datos' => ['tipo' => 'CODIGO_INVALIDO'],
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'El código es inválido o ya expiró. Solicita uno nuevo.'
+            ], 401);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Un solo uso: se marca en la misma transacción del cambio de contraseña
+            $registro->usado = true;
+            $registro->usado_en = now();
+            $registro->ip_uso = $request->ip();
+            $registro->save();
+
+            $user->contraseña = Hash::make($datos['nueva_contraseña']);
+            $user->save();
+
+            $payload = $this->respuestaLogin(
+                $user,
+                'codigo.temporal.consumido',
+                'Login con código temporal y establecimiento de nueva contraseña'
+            );
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error en login con código temporal', ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => 'No se pudo completar el ingreso'], 500);
+        }
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Genera un código de acceso temporal para un usuario (uso único).
+     * Solo Admin/SuperAdmin. Vigencia configurable: 15, 30 o 60 minutos.
+     *
+     * Body: { expiracion_minutos: 15|30|60 }
+     */
+    public function generarCodigoAccesoTemporal(Request $request, $id)
+    {
+        $datos = $request->validate([
+            'expiracion_minutos' => 'required|integer|in:15,30,60',
+        ]);
+
+        $solicitante = $request->user();
+
+        if (!in_array($solicitante->rol, ['Admin', 'SuperAdmin'], true)) {
+            Audit::log('codigo.temporal.denegado', [
+                'user_id' => $solicitante->id,
+                'descripcion' => 'Intento de generar código temporal sin rol autorizado',
+                'datos' => ['rol' => $solicitante->rol],
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para generar códigos de acceso'
+            ], 403);
+        }
+
+        // El listado de administradores expone el id de informacion_users;
+        // se resuelve por users.id o por id_infoUsuario para cubrir ambos.
+        $usuario = User::where('id', $id)->orWhere('id_infoUsuario', $id)->first();
+
+        if (!$usuario) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no encontrado'
+            ], 404);
+        }
+
+        if ($usuario->estado == 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El usuario está deshabilitado'
+            ], 403);
+        }
+
+        // Invalida códigos previos sin usar del mismo usuario (solo puede
+        // existir un código vigente por correo)
+        CodigoVerificacion::where('correo', $usuario->correo)
+            ->whereNotNull('generado_por')
+            ->where('usado', false)
+            ->update(['usado' => true, 'usado_en' => now(), 'ip_uso' => $request->ip()]);
+
+        $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $registro = CodigoVerificacion::create([
+            'correo' => $usuario->correo,
+            'codigo' => $codigo,
+            'expira_en' => now()->addMinutes((int) $datos['expiracion_minutos']),
+            'usado' => false,
+            'generado_por' => $solicitante->id,
+        ]);
+
+        Audit::log('codigo.temporal.generado', [
+            'user_id' => $solicitante->id,
+            'correo' => $solicitante->correo,
             'modelo' => 'users',
-            'modelo_id' => $user->id,
-            'descripcion' => 'Login exitoso',
-            'datos' => ['rol' => $user->rol],
+            'modelo_id' => $usuario->id,
+            'descripcion' => 'Código de acceso temporal generado para ' . $usuario->correo,
+            'datos' => [
+                'expiracion_minutos' => (int) $datos['expiracion_minutos'],
+                'expira_en' => (string) $registro->expira_en,
+            ],
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Login exitoso',
-            'access_token' => $token,
-            'user' => [
-                'correo' => $user->correo,
-                'rol' => $user->rol,
-                'usuario' => array_merge($infoUsuario->toArray(), ['id_profesional' => $idProfesional]),
-                'permisos' => $permisos
+            'message' => 'Código de acceso temporal generado',
+            'data' => [
+                'codigo' => $codigo,
+                'expira_en' => $registro->expira_en,
+                'generado_por' => $solicitante->id,
             ],
-            'permisosTemporales' => $hasPermisosIndividuales
-        ]);
-
+        ], 201);
     }
 
     public function miPerfil(Request $request)

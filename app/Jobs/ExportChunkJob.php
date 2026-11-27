@@ -42,15 +42,16 @@ class ExportChunkJob implements ShouldQueue
             File::makeDirectory($directorio, 0755, true);
         }
 
-        $analisisList = $servicios->cargarAnalisis($this->ids);
+        // Reutiliza PDFs almacenados en S3 y genera bajo demanda los
+        // que falten (migración perezosa de análisis históricos)
+        $resultado = $servicios->renderizarConReutilizacion(
+            $this->ids,
+            $this->servicio ?: null,
+            $export->filtros ?? [],
+            $directorio
+        );
 
-        if ($analisisList->isEmpty()) {
-            Export::where('id', $this->exportId)->increment('completados', count($this->ids));
-        } else {
-            $contexto = $servicios->construirContexto($analisisList);
-            $servicios->renderizarLista($analisisList, $this->servicio, $directorio, $contexto, $export->filtros);
-            Export::where('id', $this->exportId)->increment('completados', $analisisList->count());
-        }
+        Export::where('id', $this->exportId)->increment('completados', $resultado['procesados']);
 
         $debeCerrar = Export::where('id', $this->exportId)
             ->where('estado', 'procesando')

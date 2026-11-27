@@ -16,6 +16,9 @@ use ZipArchive;
 
 class PdfExportService
 {
+    /** Tamaño de lote para procesamiento por chunks (memoria acotada) */
+    public const TAMANO_LOTE = 15;
+
     public const SERVICIOS = ['Evolucion', 'Trabajo Social', 'Medicina', 'Nota', 'Terapia'];
 
     public const RELACIONES = [
@@ -272,45 +275,216 @@ class PdfExportService
         }
     }
 
+    /**
+     * Punto ÚNICO de generación de un PDF individual. Reutilizado por:
+     * - renderizarLista (exportaciones)
+     * - PdfAlmacenService (repositorio S3, generación bajo demanda)
+     * No duplicar esta lógica en otros lugares.
+     *
+     * @return array{nombre: string, bytes: string, servicio: string}|null
+     */
+    public function renderizarDocumento($analisis, array $contexto, ?string $servicioFiltro = null, array $nombres = []): ?array
+    {
+        // Servicio del propio registro: permite exportaciones mezcladas
+        // cuando no se filtra por servicio. Fallback al filtro global.
+        $servicioItem = $analisis->servicio->plantilla ?: ($servicioFiltro ?: 'REGISTRO');
+
+        $datos = $this->datosParaVista($analisis, $contexto, $servicioItem);
+
+        if ($datos === null) {
+            return null;
+        }
+
+        $pdf = Pdf::loadView($datos['view'], $datos['data']);
+
+        return [
+            'nombre' => $this->construirNombre($servicioItem, $analisis, $filtrosEspecial = $this->nombreEspecial($analisis, $servicioItem, $nombres)),
+            'bytes' => $pdf->output(),
+            'servicio' => $servicioItem,
+        ];
+    }
+
+    /**
+     * Componente de nombre según filtros (profesional o paciente),
+     * replicando la convención histórica de nombres de archivo.
+     */
+    public function nombreEspecial($analisis, string $servicioItem, array $nombres): ?string
+    {
+        if (!empty($nombres['profesional'][$analisis->id_medico])) {
+            return $nombres['profesional'][$analisis->id_medico];
+        }
+
+        if (!empty($nombres['paciente'][$analisis->historia?->id_paciente])) {
+            return $nombres['paciente'][$analisis->historia?->id_paciente];
+        }
+
+        return null;
+    }
+
+    /**
+     * Nombre de archivo del documento. $nombreEspecial (profesional o
+     * paciente) se antepone cuando la exportación filtra por esos criterios.
+     */
+    public function construirNombre(string $servicioItem, $analisis, ?string $nombreEspecial = null): string
+    {
+        $fecha = Carbon::parse($analisis->created_at)->format('Ymd');
+
+        if ($nombreEspecial) {
+            return sprintf('%s_%s_%s_%s.pdf', strtoupper($servicioItem), $analisis->id, $nombreEspecial, $fecha);
+        }
+
+        return sprintf('%s_%s_%s.pdf', strtoupper($servicioItem), $analisis->id, $fecha);
+    }
+
+    /**
+     * Nombres (profesional/paciente) para la convención de archivos de una
+     * exportación filtrada, cuando se reutilizan PDFs almacenados en S3
+     * (evita construir el contexto completo solo para nombrar el archivo).
+     */
+    public function nombresParaFiltros($analisisList, array $filtros): array
+    {
+        $nombres = ['profesional' => [], 'paciente' => []];
+
+        if (!empty($filtros['id_profesional'])) {
+            $ids = $analisisList->pluck('id_medico')->unique()->filter()->values();
+            if ($ids->isNotEmpty()) {
+                $nombres['profesional'] = DB::table('profesionals')
+                    ->join('informacion_users', 'profesionals.id_infoUsuario', '=', 'informacion_users.id')
+                    ->whereIn('profesionals.id', $ids)
+                    ->select('profesionals.id', 'informacion_users.name')
+                    ->pluck('name', 'id')
+                    ->map(fn ($n) => $this->nombreArchivoSeguro($n, 'profesional'))
+                    ->all();
+            }
+        } elseif (!empty($filtros['id_paciente'])) {
+            $ids = $analisisList->pluck('historia.id_paciente')->unique()->filter()->values();
+            if ($ids->isNotEmpty()) {
+                $nombres['paciente'] = DB::table('pacientes')
+                    ->join('informacion_users', 'pacientes.id_infoUsuario', '=', 'informacion_users.id')
+                    ->whereIn('pacientes.id', $ids)
+                    ->select('pacientes.id', 'informacion_users.name')
+                    ->pluck('name', 'id')
+                    ->map(fn ($n) => $this->nombreArchivoSeguro($n, 'paciente'))
+                    ->all();
+            }
+        }
+
+        return $nombres;
+    }
+
     public function renderizarLista($analisisList, ?string $servicio, string $directorio, array $contexto, array $filtros): array
     {
         $pdfFiles = [];
 
+        $nombres = $this->nombresParaFiltros($analisisList, $filtros);
+
         foreach ($analisisList as $analisis) {
-            // Servicio del propio registro: permite exportaciones mezcladas
-            // cuando no se filtra por servicio. Fallback al filtro global.
-            $servicioItem = $analisis->servicio->plantilla ?: ($servicio ?: 'REGISTRO');
+            $documento = $this->renderizarDocumento($analisis, $contexto, $servicio, $nombres);
 
-            $datos = $this->datosParaVista($analisis, $contexto, $servicioItem);
-
-            if ($datos === null) {
+            if ($documento === null) {
                 continue;
             }
 
-            $pdf = Pdf::loadView($datos['view'], $datos['data']);
+            $pdfPath = $directorio . '/' . $documento['nombre'];
 
-            $pdfName = '';
-            if (!empty($filtros['id_profesional'])) {
-                $nombreProfesional = $this->nombreArchivoSeguro($datos['data']['profesional']->name ?? '', 'profesional');
-                $pdfName = sprintf('%s_%s_%s_%s.pdf', strtoupper($servicioItem), $analisis->id, $nombreProfesional, Carbon::parse($analisis->created_at)->format('Ymd'));
-            } else if (!empty($filtros['id_paciente'])) {
-                $nombrePaciente = $this->nombreArchivoSeguro($datos['data']['paciente']->name ?? '', 'paciente');
-                $pdfName = sprintf('%s_%s_%s_%s.pdf', strtoupper($servicioItem), $analisis->id, $nombrePaciente, Carbon::parse($analisis->created_at)->format('Ymd'));
-            } else {
-                $pdfName = sprintf('%s_%s_%s.pdf', strtoupper($servicioItem), $analisis->id, Carbon::parse($analisis->created_at)->format('Ymd'));
-            }
-
-            $pdfPath = $directorio . '/' . $pdfName;
-
-            file_put_contents($pdfPath, $pdf->output());
+            file_put_contents($pdfPath, $documento['bytes']);
 
             $pdfFiles[] = [
                 'path' => $pdfPath,
-                'name' => $pdfName,
+                'name' => $documento['nombre'],
             ];
         }
 
         return $pdfFiles;
+    }
+
+    /**
+     * Renderiza un conjunto de análisis en $directorio REUTILIZANDO los
+     * PDFs ya almacenados en el repositorio (S3) y generando bajo demanda
+     * los que falten (migración perezosa de análisis históricos).
+     * Flujo único compartido por la exportación sync y los chunks async.
+     *
+     * @return array{archivos: array, procesados: int}
+     */
+    public function renderizarConReutilizacion(array $ids, ?string $servicioFiltro, array $filtros, string $directorio): array
+    {
+        $pdfFiles = [];
+        $procesados = 0;
+
+        $almacen = app(PdfAlmacenService::class);
+
+        foreach (array_chunk($ids, self::TAMANO_LOTE) as $lote) {
+            try {
+                $analisisList = $this->cargarAnalisis($lote);
+
+                if ($analisisList->isEmpty()) {
+                    $procesados += count($lote);
+                    continue;
+                }
+
+                $nombres = $this->nombresParaFiltros($analisisList, $filtros);
+                $pendientes = collect();
+
+                // 1) Reutilizar los PDFs ya almacenados en S3
+                foreach ($analisisList as $analisis) {
+                    if ($almacen->disponible() && $almacen->existe($analisis)) {
+                        $servicioItem = $analisis->servicio->plantilla ?: 'REGISTRO';
+                        $nombre = $this->construirNombre(
+                            $servicioItem,
+                            $analisis,
+                            $this->nombreEspecial($analisis, $servicioItem, $nombres)
+                        );
+
+                        if ($almacen->descargarA($analisis, $directorio . '/' . $nombre)) {
+                            $pdfFiles[] = [
+                                'path' => $directorio . '/' . $nombre,
+                                'name' => $nombre,
+                            ];
+                            $procesados++;
+                            continue;
+                        }
+                    }
+
+                    $pendientes->push($analisis);
+                }
+
+                // 2) Generar bajo demanda los que no tienen PDF almacenado
+                if ($pendientes->isNotEmpty()) {
+                    $contexto = $this->construirContexto($pendientes);
+
+                    foreach ($pendientes as $analisis) {
+                        $documento = $this->renderizarDocumento($analisis, $contexto, $servicioFiltro, $nombres);
+
+                        if ($documento !== null) {
+                            $ruta = $directorio . '/' . $documento['nombre'];
+                            file_put_contents($ruta, $documento['bytes']);
+
+                            $pdfFiles[] = [
+                                'path' => $ruta,
+                                'name' => $documento['nombre'],
+                            ];
+
+                            // Sube inmediatamente a S3 y registra la clave
+                            if ($almacen->disponible()) {
+                                $almacen->almacenarBytes($analisis, $documento['bytes']);
+                            }
+                        }
+
+                        $procesados++;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Un lote fallido no detiene la exportación; sus documentos
+                // quedan sin archivo y el conteo avanza para permitir el cierre
+                \Illuminate\Support\Facades\Log::error('Lote de exportación falló', [
+                    'ids' => $lote,
+                    'error' => $e->getMessage(),
+                ]);
+                $procesados += count($lote);
+            }
+        }
+
+        return ['archivos' => $pdfFiles, 'procesados' => $procesados];
     }
 
     /**
@@ -319,7 +493,7 @@ class PdfExportService
      * acentos, espacios repetidos y limita el largo, para que
      * file_put_contents no falle al escribir el PDF.
      */
-    private function nombreArchivoSeguro(?string $nombre, string $respaldo): string
+    public function nombreArchivoSeguro(?string $nombre, string $respaldo): string
     {
         $limpio = Str::slug(trim((string) $nombre), '_');
 
@@ -391,8 +565,7 @@ class PdfExportService
             return ['error' => 'Servicio no válido'];
         }
 
-        $analisisList = $this->queryExport($filtros)->get();
-        $contexto = $this->construirContexto($analisisList);
+        $ids = $this->queryExport($filtros)->pluck('id')->values()->all();
 
         $tempDir = storage_path('app/temp_pdf_' . uniqid());
 
@@ -400,7 +573,9 @@ class PdfExportService
             File::makeDirectory($tempDir, 0755, true);
         }
 
-        $pdfFiles = $this->renderizarLista($analisisList, $servicio, $tempDir, $contexto, $filtros);
+        // Reutiliza PDFs almacenados en S3; genera bajo demanda los faltantes
+        $resultado = $this->renderizarConReutilizacion($ids, $servicio, $filtros, $tempDir);
+        $pdfFiles = $resultado['archivos'];
 
         $zipName = $this->nombreZip($filtros);
         $zipPath = storage_path('app/' . uniqid() . '_' . $zipName);

@@ -32,6 +32,8 @@ use App\Services\ExportConcurrencyService;
 use App\Support\Acceso;
 use App\Support\CitaAuditoria;
 
+use Illuminate\Support\Facades\Storage;
+
 use ZipArchive;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -1648,12 +1650,14 @@ class HistoriaClinicaController extends Controller
             ], 404);
         }
 
-        return response()->json([
+        $respuesta = [
             'success' => true,
             'estado' => $export->estado,
             'total' => $export->total,
             'completados' => $export->completados,
-        ]);
+        ];
+
+        return response()->json($respuesta);
     }
 
     public function descargarExport(Request $request, $id)

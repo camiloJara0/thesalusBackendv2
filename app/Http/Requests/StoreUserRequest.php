@@ -15,7 +15,7 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'No_document' => 'required|string|max:20',
+            'No_document' => 'required',
             'type_doc' => 'required|string|max:10',
             'celular' => 'required|string|max:20',
             'telefono' => 'nullable|string|max:20',
